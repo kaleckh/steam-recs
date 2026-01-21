@@ -1,0 +1,22 @@
+// This is your Prisma schema file
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Game {
+  appId     BigInt                   @id @map("app_id")
+  name      String
+  metadata  Json?                    @db.JsonB
+  embedding Unsupported("vector(384)")? @map("embedding")
+  createdAt DateTime                 @default(now()) @map("created_at")
+  updatedAt DateTime                 @updatedAt @map("updated_at")
+
+  @@map("games")
+}

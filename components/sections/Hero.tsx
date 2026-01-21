@@ -1,7 +1,6 @@
 import Headline from '../ui/Headline';
 import Subtext from '../ui/Subtext';
 import StatsGrid from '../ui/StatsGrid';
-import CTAButton from '../ui/CTAButton';
 
 export default function Hero() {
   return (
@@ -10,19 +9,21 @@ export default function Hero() {
         <div className="flex flex-col items-center text-center space-y-12">
           {/* Hero Content */}
           <div className="space-y-6 max-w-3xl">
-            <Headline>Find Your Next Favorite Game</Headline>
+            <Headline>Ai powered game recommendations</Headline>
             <Subtext>
-              Stop scrolling through endless Steam listings. Get personalized recommendations in seconds.
+              add your steam tag and lets get started
             </Subtext>
           </div>
 
-          {/* CTA Button */}
-          <CTAButton 
-            href="/api/auth/steam" 
-            ariaLabel="Sign in with Steam to get recommendations"
-          >
-            Sign in with Steam
-          </CTAButton>
+          {/* Steam ID Input */}
+          <div className="w-full max-w-2xl">
+            <input
+              type="text"
+              placeholder="Enter your Steam ID or profile URL"
+              className="w-full px-8 py-6 text-lg text-gray-900 placeholder-gray-500 bg-white border-2 border-blue-300 rounded-xl shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-400 focus:border-blue-500 transition-all duration-200 hover:border-blue-400"
+              aria-label="Enter your Steam ID to get recommendations"
+            />
+          </div>
 
           {/* Stats Grid */}
           <StatsGrid />
