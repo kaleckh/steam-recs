@@ -72,6 +72,7 @@ export function convertSteamDataToIngestFormat(steamData: SteamAppDetails) {
       categories: steamData.categories?.map((c) => c.description) || [],
       developers: steamData.developers || [],
       publishers: steamData.publishers || [],
+      price_overview: steamData.price_overview || null, // Add price data
       // Store additional metadata as needed
     },
   };

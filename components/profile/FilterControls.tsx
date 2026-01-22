@@ -1,33 +1,48 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RecommendationFilters } from '@/lib/api-client';
 
 interface FilterControlsProps {
   onFilterChange: (filters: RecommendationFilters) => void;
   isLoading?: boolean;
+  isExpanded: boolean;
+  onToggleExpanded: (expanded: boolean) => void;
+  currentFilters?: RecommendationFilters;
 }
 
 export default function FilterControls({
   onFilterChange,
   isLoading,
+  isExpanded,
+  onToggleExpanded,
+  currentFilters,
 }: FilterControlsProps) {
-  const [filters, setFilters] = useState<RecommendationFilters>({
-    limit: 20,
-    excludeOwned: true,
-    minReviewScore: 0,
-    popularityScore: 50, // Default: balanced (50)
-  });
+  const [filters, setFilters] = useState<RecommendationFilters>(
+    currentFilters || {
+      limit: 20,
+      excludeOwned: true,
+      minReviewScore: 0,
+      popularityScore: 50,
+    }
+  );
 
-  const [isExpanded, setIsExpanded] = useState(false);
+  // Sync with parent's current filters
+  useEffect(() => {
+    if (currentFilters) {
+      setFilters(currentFilters);
+    }
+  }, [currentFilters]);
 
   const handleFilterChange = (
     key: keyof RecommendationFilters,
     value: any
   ) => {
-    const newFilters = { ...filters, [key]: value };
-    setFilters(newFilters);
-    onFilterChange(newFilters);
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleApplyFilters = () => {
+    onFilterChange(filters);
   };
 
   return (
@@ -35,7 +50,7 @@ export default function FilterControls({
       <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
         {/* Header */}
         <button
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={() => onToggleExpanded(!isExpanded)}
           className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
         >
           <div className="flex items-center space-x-3">
@@ -238,23 +253,58 @@ export default function FilterControls({
               </label>
             </div>
 
-            {/* Reset Button */}
-            <button
-              onClick={() => {
-                const defaultFilters: RecommendationFilters = {
-                  limit: 20,
-                  excludeOwned: true,
-                  minReviewScore: 0,
-                  popularityScore: 50, // Reset to balanced
-                };
-                setFilters(defaultFilters);
-                onFilterChange(defaultFilters);
-              }}
-              disabled={isLoading}
-              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Reset Filters
-            </button>
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleApplyFilters}
+                disabled={isLoading}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md flex items-center justify-center gap-2"
+              >
+                {isLoading ? (
+                  <>
+                    <svg
+                      className="animate-spin h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Applying...
+                  </>
+                ) : (
+                  'Apply Filters'
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  const defaultFilters: RecommendationFilters = {
+                    limit: 20,
+                    excludeOwned: true,
+                    minReviewScore: 0,
+                    popularityScore: 50, // Reset to balanced
+                  };
+                  setFilters(defaultFilters);
+                  onFilterChange(defaultFilters);
+                }}
+                disabled={isLoading}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Reset
+              </button>
+            </div>
           </div>
         )}
       </div>

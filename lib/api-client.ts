@@ -43,6 +43,8 @@ export interface GameRecommendation {
   reviewCount: number | null;
   metacriticScore: number | null;
   isFree: boolean | null;
+  price?: string; // Formatted price like "$19.99" or "Free"
+  priceRaw?: number; // Price in cents
   genres?: string[];
   shortDescription?: string;
   headerImage?: string;
@@ -179,4 +181,130 @@ export function getFriendlyErrorMessage(error: string): string {
   }
 
   return error || ERROR_MESSAGES.SERVER_ERROR;
+}
+
+/**
+ * Feedback System API (PREMIUM ONLY)
+ */
+
+export type FeedbackType = 'like' | 'dislike' | 'not_interested' | 'love';
+
+export interface FeedbackResponse {
+  success: boolean;
+  vectorUpdated?: boolean;
+  message?: string;
+  error?: string;
+  requiresPremium?: boolean;
+}
+
+export interface SubscriptionStatus {
+  success: boolean;
+  tier: string;
+  isPremium: boolean;
+  expiresAt: string | null;
+  daysRemaining: number;
+  isExpired: boolean;
+  features: {
+    unlimitedResults: boolean;
+    feedbackLearning: boolean;
+    advancedFilters: boolean;
+    notInterestedList: boolean;
+  };
+  stats: {
+    feedbackLikesCount: number;
+    feedbackDislikesCount: number;
+    totalFeedback: number;
+  };
+}
+
+/**
+ * Submit feedback on a game (PREMIUM ONLY)
+ */
+export async function submitFeedback(
+  userId: string,
+  appId: string,
+  feedbackType: FeedbackType
+): Promise<FeedbackResponse> {
+  try {
+    const response = await fetch('/api/user/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        appId: parseInt(appId),
+        feedbackType,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.error || 'Failed to submit feedback',
+        requiresPremium: data.requiresPremium,
+      };
+    }
+
+    return data;
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * Get subscription status
+ */
+export async function getSubscriptionStatus(
+  userId: string
+): Promise<SubscriptionStatus | null> {
+  try {
+    const response = await fetch(`/api/user/subscription?userId=${userId}`);
+
+    if (!response.ok) {
+      console.error('Failed to fetch subscription status');
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching subscription status:', error);
+    return null;
+  }
+}
+
+/**
+ * Update subscription (for testing/admin)
+ */
+export async function updateSubscription(
+  userId: string,
+  tier: 'free' | 'premium',
+  expiresAt?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const response = await fetch('/api/user/subscription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, tier, expiresAt }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.error || 'Failed to update subscription',
+      };
+    }
+
+    return data;
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }

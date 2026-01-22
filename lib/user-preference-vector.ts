@@ -83,8 +83,9 @@ export function calculatePlaytimeWeight(playHours: number): number {
     // Deep engagement
     return 2.0 + Math.log10(playHours - 49) * 0.3; // 2.0 to ~2.45
   } else {
-    // Logarithmic cap to prevent 1000+ hour games from overwhelming
-    return 2.5 + Math.log10(playHours - 199) * 0.15; // 2.5 to ~2.8 max
+    // Aggressive cap to prevent 1000+ hour games from overwhelming
+    // 200hrs = 2.5, 1000hrs = 2.54 (much flatter)
+    return 2.5 + Math.log10(playHours - 199) * 0.05; // 2.5 to ~2.54 max
   }
 }
 
@@ -192,37 +193,106 @@ export function calculateGameWeight(
 }
 
 /**
- * Normalize weights for genre diversity.
+ * Normalize weights for genre and franchise diversity.
  *
  * Problem: User with 500 hours across 10 FPS games will get FPS-only recommendations.
- * Solution: Reduce weight for overrepresented genres using sqrt normalization.
+ * Worse: User with 300 hours in Total War: Warhammer series dominates recommendations.
+ *
+ * Solution: Reduce weight for overrepresented genres AND franchises using sqrt normalization.
  */
 function normalizeForGenreDiversity(
   gamesWithWeights: Array<{
     appId: bigint;
     weight: number;
     genres: string[];
+    tags: string[];
   }>
 ): Map<bigint, number> {
+  // Common franchise identifiers (tags that indicate series/universe)
+  const franchiseTags = [
+    'Warhammer',
+    'Total War',
+    'Call of Duty',
+    'Assassin\'s Creed',
+    'Grand Theft Auto',
+    'The Elder Scrolls',
+    'Fallout',
+    'Battlefield',
+    'Far Cry',
+    'Civilization',
+    'Dark Souls',
+    'Souls-like',
+    'Pokemon',
+    'Final Fantasy',
+    'LEGO',
+    'Star Wars',
+    'Marvel',
+    'DC Comics',
+    'Harry Potter',
+    'Lord of the Rings',
+    'Witcher',
+    'Dragon Age',
+    'Mass Effect',
+    'Borderlands',
+    'Metro',
+    'Resident Evil',
+    'Silent Hill',
+    'Persona',
+    'Kingdom Hearts',
+  ];
+
   // Count games per primary genre
   const genreCounts = new Map<string, number>();
-
   gamesWithWeights.forEach(game => {
     const primaryGenre = game.genres[0] || 'Unknown';
     genreCounts.set(primaryGenre, (genreCounts.get(primaryGenre) || 0) + 1);
   });
 
-  // Apply diversity penalty
+  // Count games per franchise tag
+  const franchiseCounts = new Map<string, number>();
+  gamesWithWeights.forEach(game => {
+    const tags = game.tags || [];
+
+    // Find all matching franchise tags (a game can have multiple, e.g., "Star Wars" + "LEGO")
+    const matchingFranchises = franchiseTags.filter(franchise =>
+      tags.some(tag => tag.toLowerCase().includes(franchise.toLowerCase()))
+    );
+
+    matchingFranchises.forEach(franchise => {
+      franchiseCounts.set(franchise, (franchiseCounts.get(franchise) || 0) + 1);
+    });
+  });
+
+  // Apply diversity penalties
   const adjustedWeights = new Map<bigint, number>();
 
   gamesWithWeights.forEach(game => {
     const primaryGenre = game.genres[0] || 'Unknown';
     const genreCount = genreCounts.get(primaryGenre) || 1;
 
-    // Sqrt normalization: 10 games of same genre -> each gets 1/sqrt(10) = 0.316x
-    const diversityPenalty = 1 / Math.sqrt(genreCount);
+    // Genre penalty: sqrt normalization
+    const genrePenalty = 1 / Math.sqrt(genreCount);
 
-    adjustedWeights.set(game.appId, game.weight * diversityPenalty);
+    // Franchise penalty: find strongest franchise match
+    const tags = game.tags || [];
+    const matchingFranchises = franchiseTags.filter(franchise =>
+      tags.some(tag => tag.toLowerCase().includes(franchise.toLowerCase()))
+    );
+
+    let franchisePenalty = 1.0;
+    if (matchingFranchises.length > 0) {
+      // If game matches multiple franchises, use the one with highest count (strongest penalty)
+      const maxFranchiseCount = Math.max(
+        ...matchingFranchises.map(f => franchiseCounts.get(f) || 1)
+      );
+      franchisePenalty = 1 / Math.sqrt(maxFranchiseCount);
+    }
+
+    // Combined penalty (multiply both)
+    // Example: 9 strategy games + 3 Warhammer games -> 1/3 * 1/1.73 = 0.192x weight
+    const combinedPenalty = genrePenalty * franchisePenalty;
+
+    adjustedWeights.set(game.appId, game.weight * combinedPenalty);
   });
 
   return adjustedWeights;
@@ -277,17 +347,24 @@ export async function generateUserPreferenceVector(
     embedding: number[];
     weight: number;
     genres: string[];
+    tags: string[];
   }> = [];
 
   for (const game of topGames) {
     const gameData = await getGameWithEmbedding(game.appId);
 
     if (gameData?.embedding) {
+      // Extract tags from game metadata
+      const tags = Array.isArray(gameData.metadata?.tags)
+        ? gameData.metadata.tags
+        : [];
+
       gamesWithEmbeddings.push({
         appId: game.appId,
         embedding: gameData.embedding,
         weight: game.weight,
         genres: game.genres || [],
+        tags,
       });
     }
   }

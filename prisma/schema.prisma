@@ -33,6 +33,7 @@ model Game {
 
   // Relations
   userGames          UserGame[]
+  userFeedback       UserFeedback[]
 
   @@map("games")
   @@index([releaseYear])
@@ -48,10 +49,21 @@ model UserProfile {
   // Personalized recommendation vector (computed from played games)
   preferenceVector   Unsupported("vector(384)")? @map("preference_vector")
 
+  // Learned vector (dynamically updated from feedback - PREMIUM ONLY)
+  learnedVector      Unsupported("vector(384)")? @map("learned_vector")
+
+  // Subscription tier
+  subscriptionTier   String                   @default("free") @map("subscription_tier") // 'free' or 'premium'
+  subscriptionExpiresAt DateTime?             @map("subscription_expires_at")
+
   // Metadata about preference generation
   lastUpdated        DateTime?                @map("last_updated")
   gamesAnalyzed      Int                      @default(0) @map("games_analyzed") // Count of games used
   totalPlaytimeHours Float                    @default(0) @map("total_playtime_hours")
+
+  // Feedback stats
+  feedbackLikesCount Int                      @default(0) @map("feedback_likes_count")
+  feedbackDislikesCount Int                   @default(0) @map("feedback_dislikes_count")
 
   // User preferences and filters
   preferences        Json?                    @db.JsonB // Custom user preferences (genres to boost, etc.)
@@ -61,9 +73,31 @@ model UserProfile {
 
   // Relations
   games              UserGame[]
+  feedback           UserFeedback[]
 
   @@map("user_profiles")
   @@index([steamId])
+  @@index([subscriptionTier])
+}
+
+model UserFeedback {
+  id           String       @id @default(cuid())
+  userId       String       @map("user_id")
+  appId        BigInt       @map("app_id")
+  feedbackType String       @map("feedback_type") // 'like', 'dislike', 'not_interested', 'love'
+
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  user         UserProfile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game         Game         @relation(fields: [appId], references: [appId], onDelete: Cascade)
+
+  @@unique([userId, appId])
+  @@map("user_feedback")
+  @@index([userId])
+  @@index([appId])
+  @@index([feedbackType])
 }
 
 model UserGame {

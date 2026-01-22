@@ -48,6 +48,8 @@ export default function ProfilePage() {
     minReviewScore: 0,
     popularityScore: 50, // Default: balanced
   });
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+  const [isApplyingFilters, setIsApplyingFilters] = useState(false);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -161,16 +163,14 @@ export default function ProfilePage() {
   // Handle filter changes
   const handleFilterChange = async (newFilters: RecommendationFilters) => {
     setFilters(newFilters);
+    setIsApplyingFilters(true);
 
     if (state.stage === 'recommendations') {
-      // Re-fetch recommendations with new filters
-      setState({
-        stage: 'loading_recommendations',
-        userId: state.userId,
-        steamId: state.steamId,
-      });
-
-      const result = await getRecommendations(state.userId, newFilters);
+      // Start both the API call and minimum delay
+      const [result] = await Promise.all([
+        getRecommendations(state.userId, newFilters),
+        new Promise(resolve => setTimeout(resolve, 500)) // Minimum 500ms
+      ]);
 
       if (result.success && result.recommendations) {
         setState({
@@ -191,6 +191,9 @@ export default function ProfilePage() {
         });
       }
     }
+
+    setIsApplyingFilters(false);
+    setIsFilterExpanded(false); // Close the filter menu
   };
 
   // Handle profile update (re-ingest)
@@ -259,15 +262,51 @@ export default function ProfilePage() {
             {/* Filters */}
             <FilterControls
               onFilterChange={handleFilterChange}
-              isLoading={false}
+              isLoading={isApplyingFilters}
+              isExpanded={isFilterExpanded}
+              onToggleExpanded={setIsFilterExpanded}
+              currentFilters={filters}
             />
 
+            {/* Loading Spinner for Filter Changes */}
+            {isApplyingFilters && (
+              <div className="flex justify-center py-12">
+                <div className="flex flex-col items-center space-y-4">
+                  <svg
+                    className="animate-spin h-12 w-12 text-blue-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  <p className="text-gray-600 font-medium">Updating recommendations...</p>
+                </div>
+              </div>
+            )}
+
             {/* Recommendations */}
-            <RecommendationsList
-              recommendations={state.recommendations}
-              gamesAnalyzed={state.gamesAnalyzed}
-              totalPlaytimeHours={state.totalPlaytimeHours}
-            />
+            {!isApplyingFilters && (
+              <RecommendationsList
+                recommendations={state.recommendations}
+                gamesAnalyzed={state.gamesAnalyzed}
+                totalPlaytimeHours={state.totalPlaytimeHours}
+                userId={state.userId}
+                isPremium={true}
+              />
+            )}
           </div>
         )}
       </div>

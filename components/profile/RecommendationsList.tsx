@@ -1,19 +1,153 @@
 'use client';
 
-import { GameRecommendation } from '@/lib/api-client';
+import { useState, useEffect, useRef } from 'react';
+import { GameRecommendation, getRecommendations, type FeedbackType } from '@/lib/api-client';
 import GameCard from './GameCard';
+import PremiumModal from './PremiumModal';
+import FeedbackToast from './FeedbackToast';
 
 interface RecommendationsListProps {
   recommendations: GameRecommendation[];
   gamesAnalyzed: number;
   totalPlaytimeHours?: number;
+  userId?: string;
+  isPremium?: boolean;
 }
 
 export default function RecommendationsList({
-  recommendations,
+  recommendations: initialRecommendations,
   gamesAnalyzed,
   totalPlaytimeHours,
+  userId,
+  isPremium = true, // Default to true - everyone gets feedback features for now
 }: RecommendationsListProps) {
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [recommendations, setRecommendations] = useState<GameRecommendation[]>(initialRecommendations);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [offset, setOffset] = useState(0);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'info'>('success');
+  const [showToast, setShowToast] = useState(false);
+
+  // Reset recommendations when initial recommendations change
+  useEffect(() => {
+    setRecommendations(initialRecommendations);
+    setOffset(0);
+    setHasMore(true);
+  }, [initialRecommendations]);
+
+  // Show toast notification
+  const showToastNotification = (message: string, type: 'success' | 'info' = 'success') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+  };
+
+  // Handle feedback submission - remove negative cards and fetch new ones
+  const handleFeedback = async (feedbackType: FeedbackType, appId: string) => {
+    // Show appropriate toast based on feedback type
+    const toastMessages = {
+      love: '❤️ Loved! AI is learning your preferences...',
+      like: '👍 Liked! Recommendations will adapt to your taste',
+      dislike: '👎 Disliked! Showing you different games...',
+      not_interested: '🚫 Hidden! This game won\'t appear again',
+    };
+
+    showToastNotification(toastMessages[feedbackType], 'success');
+
+    // For negative feedback, remove the card after fade out
+    if (feedbackType === 'dislike' || feedbackType === 'not_interested') {
+      setTimeout(() => {
+        setRecommendations(prev => prev.filter(game => game.appId !== appId));
+
+        // Fetch one new game to replace the removed one
+        if (userId) {
+          fetchMoreRecommendations(1);
+        }
+      }, 600); // Wait for fade animation
+    }
+
+    // Note: We don't call onFeedbackSubmitted() here to avoid race conditions
+    // The learned vector is already updated by the feedback API call
+    // New recommendations will use the updated vector automatically
+  };
+
+  // Fetch more recommendations
+  const fetchMoreRecommendations = async (count: number = 10) => {
+    if (!userId || isLoadingMore) return;
+
+    setIsLoadingMore(true);
+
+    try {
+      // Fetch a larger batch to ensure we get enough unique games
+      // The API uses the updated learned vector automatically for premium users
+      const fetchCount = Math.max(count * 3, 30);
+
+      const result = await getRecommendations(userId, {
+        limit: fetchCount,
+        excludeOwned: true,
+      });
+
+      if (result.success && result.recommendations) {
+        // Filter out games we already have shown
+        const existingAppIds = new Set(recommendations.map(g => g.appId));
+        const newGames = result.recommendations.filter(
+          game => !existingAppIds.has(game.appId)
+        );
+
+        // Take only the number we need
+        const gamesToAdd = newGames.slice(0, count);
+
+        if (gamesToAdd.length > 0) {
+          setRecommendations(prev => [...prev, ...gamesToAdd]);
+          setOffset(prev => prev + gamesToAdd.length);
+        } else {
+          // No new unique games found
+          setHasMore(false);
+        }
+
+        // If we got very few new games, we might be running out
+        if (newGames.length < count) {
+          setHasMore(false);
+        }
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error('Failed to fetch more recommendations:', error);
+      setHasMore(false);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  // Infinite scroll observer
+  useEffect(() => {
+    if (!userId || !hasMore) return;
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isLoadingMore) {
+          fetchMoreRecommendations(10);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentLoadMoreRef = loadMoreRef.current;
+    if (currentLoadMoreRef) {
+      observerRef.current.observe(currentLoadMoreRef);
+    }
+
+    return () => {
+      if (observerRef.current && currentLoadMoreRef) {
+        observerRef.current.unobserve(currentLoadMoreRef);
+      }
+    };
+  }, [userId, hasMore, isLoadingMore, recommendations.length, offset]);
   if (recommendations.length === 0) {
     return (
       <div className="w-full max-w-4xl mx-auto py-12">
@@ -89,9 +223,77 @@ export default function RecommendationsList({
       {/* Recommendations Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {recommendations.map((game) => (
-          <GameCard key={game.appId} game={game} />
+          <GameCard
+            key={game.appId}
+            game={game}
+            userId={userId}
+            isPremium={isPremium}
+            onFeedbackSubmitted={handleFeedback}
+            onPremiumRequired={() => setShowPremiumModal(true)}
+          />
         ))}
       </div>
+
+      {/* Infinite Scroll Trigger */}
+      {hasMore && userId && (
+        <div ref={loadMoreRef} className="py-8 flex justify-center">
+          {isLoadingMore ? (
+            <div className="flex flex-col items-center space-y-4">
+              <svg
+                className="animate-spin h-12 w-12 text-blue-600"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              <p className="text-gray-600 font-medium">Loading more recommendations...</p>
+            </div>
+          ) : (
+            <div className="h-20"></div>
+          )}
+        </div>
+      )}
+
+      {/* End of recommendations message */}
+      {!hasMore && recommendations.length > 0 && (
+        <div className="py-8 text-center">
+          <p className="text-gray-600">
+            You've reached the end of your recommendations. Try adjusting your filters for more results!
+          </p>
+        </div>
+      )}
+
+      {/* Premium Modal */}
+      <PremiumModal
+        isOpen={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+        onUpgrade={() => {
+          // TODO: Implement Stripe checkout
+          alert('Payment integration coming soon! For now, contact support to activate Premium.');
+          setShowPremiumModal(false);
+        }}
+      />
+
+      {/* Feedback Toast */}
+      <FeedbackToast
+        message={toastMessage}
+        type={toastType}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+      />
     </div>
   );
 }

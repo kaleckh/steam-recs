@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import { getHybridVector, getNotInterestedGames } from '@/lib/vector-learning';
 
 /**
  * POST /api/user/recommend
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
     const limit = Math.min(body.limit || 20, 100);
     const excludeOwned = body.excludeOwned !== false; // Default true
 
-    // Fetch user profile with preference vector
+    // Fetch user profile with preference vector and subscription info
     const userProfile = await prisma.$queryRaw<
       Array<{
         id: string;
@@ -46,6 +47,8 @@ export async function POST(request: NextRequest) {
         preference_vector: string | null;
         games_analyzed: number;
         last_updated: Date | null;
+        subscription_tier: string;
+        subscription_expires_at: Date | null;
       }>
     >`
       SELECT
@@ -53,7 +56,9 @@ export async function POST(request: NextRequest) {
         steam_id,
         preference_vector::text as preference_vector,
         games_analyzed,
-        last_updated
+        last_updated,
+        subscription_tier,
+        subscription_expires_at
       FROM user_profiles
       WHERE id = ${body.userId}
       LIMIT 1
@@ -78,8 +83,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse preference vector
-    const vectorString = user.preference_vector;
+    // Check if user is premium
+    const isPremium = user.subscription_tier === 'premium';
+    const isExpired = user.subscription_expires_at &&
+                      new Date(user.subscription_expires_at) < new Date();
+    const hasPremiumAccess = isPremium && !isExpired;
+
+    // TODO: For now, everyone gets hybrid vector (will restrict to premium later)
+    // For premium users, use hybrid vector (preference + learned)
+    // For free users, use preference vector only
+    let queryVector: number[] | null = null;
+
+    // Always try to get hybrid vector for now
+    queryVector = await getHybridVector(body.userId);
+
+    // Fallback to preference vector if hybrid vector not available
+    if (!queryVector) {
+      // Parse preference vector from database string format
+      queryVector = user.preference_vector
+        .replace(/[\[\]]/g, '')
+        .split(',')
+        .map(Number);
+    }
+
+    // Convert vector to pgvector format string
+    const vectorString = `[${queryVector.join(',')}]`;
 
     // Get user's owned games (if excluding)
     let ownedAppIds: bigint[] = [];
@@ -93,15 +121,25 @@ export async function POST(request: NextRequest) {
       ownedAppIds = ownedGames.map(g => g.appId);
     }
 
+    // Get games marked as "not interested" (PREMIUM FEATURE)
+    // These games are permanently excluded from recommendations
+    let notInterestedAppIds: bigint[] = [];
+
+    // TODO: For now, everyone gets this feature (will restrict to premium later)
+    notInterestedAppIds = await getNotInterestedGames(body.userId);
+
+    // Combine owned and not interested games for exclusion
+    const excludeAppIds = [...ownedAppIds, ...notInterestedAppIds];
+
     // Build filter conditions
     const filters = body.filters || {};
     const filterConditions: Prisma.Sql[] = [];
 
-    // Exclude owned games
-    if (ownedAppIds.length > 0) {
+    // Exclude owned games and not interested games
+    if (excludeAppIds.length > 0) {
       filterConditions.push(
         Prisma.sql`app_id != ALL(ARRAY[${Prisma.join(
-          ownedAppIds.map(id => Prisma.sql`${id}`),
+          excludeAppIds.map(id => Prisma.sql`${id}`),
           ','
         )}]::bigint[])`
       );
@@ -217,6 +255,7 @@ export async function POST(request: NextRequest) {
     // Transform results
     const results = recommendations.map(game => {
       const metadata = game.metadata || {};
+      const priceOverview = metadata.price_overview as any;
 
       return {
         appId: game.app_id.toString(),
@@ -228,6 +267,8 @@ export async function POST(request: NextRequest) {
         reviewCount: game.review_count,
         metacriticScore: game.metacritic_score,
         isFree: game.is_free,
+        price: priceOverview?.final_formatted as string | undefined,
+        priceRaw: priceOverview?.final as number | undefined,
         genres: metadata.genres as string[] | undefined,
         shortDescription: metadata.short_description as string | undefined,
         headerImage: metadata.header_image as string | undefined,
@@ -241,6 +282,9 @@ export async function POST(request: NextRequest) {
       steamId: user.steam_id,
       gamesAnalyzed: user.games_analyzed,
       lastUpdated: user.last_updated,
+      isPremium: hasPremiumAccess,
+      usingHybridVector: hasPremiumAccess && queryVector !== null,
+      gamesExcluded: excludeAppIds.length,
       recommendationCount: results.length,
       recommendations: results,
     });
