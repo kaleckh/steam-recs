@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
       SELECT
         app_id,
         name,
-        (embedding <=> ${Prisma.raw(vectorString)}::vector(384)) as distance,
+        (embedding <=> ${Prisma.raw(`'${vectorString}'::vector(384)`)}) as distance,
         release_year,
         review_positive_pct,
         review_count,
@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
         metadata
       FROM games
       ${whereClause}
-      ORDER BY embedding <=> ${Prisma.raw(vectorString)}::vector(384) ASC
+      ORDER BY embedding <=> ${Prisma.raw(`'${vectorString}'::vector(384)`)} ASC
       LIMIT ${limit}
     `;
 

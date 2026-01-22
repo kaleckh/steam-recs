@@ -4,6 +4,7 @@ import MobileMenu from './MobileMenu';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Home' },
+  { href: '/profile', label: 'My Profile' },
   { href: '/discover', label: 'Discover' },
   { href: '/stats', label: 'Stats' },
   { href: '/challenge', label: 'Challenge' },
@@ -31,10 +32,10 @@ export default function Header() {
           {/* CTA Button */}
           <div className="hidden md:block">
             <a
-              href="/api/auth/steam"
+              href="/profile"
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2"
             >
-              Connect Steam
+              Get Recommendations
             </a>
           </div>
 

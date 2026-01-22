@@ -381,7 +381,7 @@ export async function updateUserPreferenceVector(
     await prisma.$executeRaw`
       UPDATE user_profiles
       SET
-        preference_vector = ${Prisma.raw(vectorString)}::vector(384),
+        preference_vector = ${Prisma.raw(`'${vectorString}'::vector(384)`)},
         last_updated = NOW(),
         games_analyzed = ${result.gamesAnalyzed},
         total_playtime_hours = ${totalPlaytimeHours}
