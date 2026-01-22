@@ -151,6 +151,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Popularity filter (Hidden Gems vs Popular)
+    if (filters.popularityScore !== undefined) {
+      const score = filters.popularityScore;
+
+      if (score < 50) {
+        // Hidden Gems: Prefer low review count
+        // At 0: max 10k reviews, at 49: max 100k reviews
+        const maxReviews = 10000 + (score * 1800);
+        filterConditions.push(
+          Prisma.sql`review_count <= ${Math.round(maxReviews)}`
+        );
+        // Ensure quality: require at least 70% positive
+        filterConditions.push(Prisma.sql`review_positive_pct >= 70`);
+      } else if (score > 50) {
+        // Popular: Prefer high review count
+        // At 51: min 5k reviews, at 100: min 50k reviews
+        const minReviews = 5000 + ((score - 50) * 900);
+        filterConditions.push(
+          Prisma.sql`review_count >= ${Math.round(minReviews)}`
+        );
+      }
+      // At exactly 50: no popularity filter (balanced)
+    }
+
     // Only include games with embeddings
     filterConditions.push(Prisma.sql`embedding IS NOT NULL`);
 

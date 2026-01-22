@@ -16,6 +16,7 @@ export default function FilterControls({
     limit: 20,
     excludeOwned: true,
     minReviewScore: 0,
+    popularityScore: 50, // Default: balanced (50)
   });
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -95,6 +96,42 @@ export default function FilterControls({
                 <span>50</span>
                 <span>100</span>
               </div>
+            </div>
+
+            {/* Popularity Slider (Hidden Gems vs Popular) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Game Popularity:{' '}
+                {filters.popularityScore === undefined || filters.popularityScore === 50
+                  ? 'Balanced'
+                  : filters.popularityScore < 50
+                    ? `Hidden Gems (${filters.popularityScore})`
+                    : `Popular (${filters.popularityScore})`}
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value={filters.popularityScore ?? 50}
+                onChange={(e) =>
+                  handleFilterChange('popularityScore', parseInt(e.target.value))
+                }
+                disabled={isLoading}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>Hidden Gems</span>
+                <span>Balanced</span>
+                <span>Popular</span>
+              </div>
+              <p className="text-xs text-gray-600 mt-2">
+                {filters.popularityScore === undefined || filters.popularityScore === 50
+                  ? 'Mix of well-known and undiscovered games'
+                  : filters.popularityScore < 50
+                    ? 'Discover underrated games with fewer reviews but high quality'
+                    : 'Show popular games that everyone knows and loves'}
+              </p>
             </div>
 
             {/* Minimum Review Score */}
@@ -208,6 +245,7 @@ export default function FilterControls({
                   limit: 20,
                   excludeOwned: true,
                   minReviewScore: 0,
+                  popularityScore: 50, // Reset to balanced
                 };
                 setFilters(defaultFilters);
                 onFilterChange(defaultFilters);

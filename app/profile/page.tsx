@@ -46,6 +46,7 @@ export default function ProfilePage() {
     limit: 20,
     excludeOwned: true,
     minReviewScore: 0,
+    popularityScore: 50, // Default: balanced
   });
 
   // Check for existing session on mount
@@ -258,7 +259,7 @@ export default function ProfilePage() {
             {/* Filters */}
             <FilterControls
               onFilterChange={handleFilterChange}
-              isLoading={state.stage === 'loading_recommendations'}
+              isLoading={false}
             />
 
             {/* Recommendations */}

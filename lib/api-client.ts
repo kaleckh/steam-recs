@@ -30,6 +30,7 @@ export interface RecommendationFilters {
   releaseYearMax?: number;
   isFree?: boolean;
   genres?: string[];
+  popularityScore?: number; // 0-100: 0 = hidden gems, 50 = balanced, 100 = popular
 }
 
 export interface GameRecommendation {
