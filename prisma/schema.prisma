@@ -11,12 +11,88 @@ datasource db {
 }
 
 model Game {
-  appId     BigInt                   @id @map("app_id")
-  name      String
-  metadata  Json?                    @db.JsonB
-  embedding Unsupported("vector(384)")? @map("embedding")
-  createdAt DateTime                 @default(now()) @map("created_at")
-  updatedAt DateTime                 @updatedAt @map("updated_at")
+  appId              BigInt                   @id @map("app_id")
+  name               String
+
+  // Frequently queried fields for filtering and scoring
+  releaseYear        Int?                     @map("release_year")
+  reviewPositivePct  Int?                     @map("review_positive_pct") // 0-100
+  reviewCount        Int?                     @map("review_count")
+  isFree             Boolean?                 @map("is_free")
+  metacriticScore    Int?                     @map("metacritic_score")
+  type               String?                  // game, dlc, demo, etc.
+
+  // Full metadata as JSONB for flexibility
+  metadata           Json?                    @db.JsonB
+
+  // Vector embedding for similarity search
+  embedding          Unsupported("vector(384)")? @map("embedding")
+
+  createdAt          DateTime                 @default(now()) @map("created_at")
+  updatedAt          DateTime                 @updatedAt @map("updated_at")
+
+  // Relations
+  userGames          UserGame[]
 
   @@map("games")
+  @@index([releaseYear])
+  @@index([reviewPositivePct])
+  @@index([isFree])
+  @@index([type])
+}
+
+model UserProfile {
+  id                 String                   @id @default(cuid())
+  steamId            String?                  @unique @map("steam_id") // Steam user ID (optional)
+
+  // Personalized recommendation vector (computed from played games)
+  preferenceVector   Unsupported("vector(384)")? @map("preference_vector")
+
+  // Metadata about preference generation
+  lastUpdated        DateTime?                @map("last_updated")
+  gamesAnalyzed      Int                      @default(0) @map("games_analyzed") // Count of games used
+  totalPlaytimeHours Float                    @default(0) @map("total_playtime_hours")
+
+  // User preferences and filters
+  preferences        Json?                    @db.JsonB // Custom user preferences (genres to boost, etc.)
+
+  createdAt          DateTime                 @default(now()) @map("created_at")
+  updatedAt          DateTime                 @updatedAt @map("updated_at")
+
+  // Relations
+  games              UserGame[]
+
+  @@map("user_profiles")
+  @@index([steamId])
+}
+
+model UserGame {
+  id                 String                   @id @default(cuid())
+  userId             String                   @map("user_id")
+  appId              BigInt                   @map("app_id")
+
+  // Playtime data (from Steam API)
+  playtimeMinutes    Int                      @map("playtime_minutes") // Total playtime in minutes
+  playtimeRecent     Int?                     @map("playtime_recent") // Last 2 weeks playtime (optional)
+  lastPlayed         DateTime?                @map("last_played") // Last time game was played
+
+  // Achievement data (optional, for quality signals)
+  achievementsEarned Int?                     @map("achievements_earned")
+  achievementsTotal  Int?                     @map("achievements_total")
+
+  // Computed weights (cached for performance)
+  computedWeight     Float?                   @map("computed_weight") // Overall weight for this game
+
+  createdAt          DateTime                 @default(now()) @map("created_at")
+  updatedAt          DateTime                 @updatedAt @map("updated_at")
+
+  // Relations
+  user               UserProfile              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game               Game                     @relation(fields: [appId], references: [appId], onDelete: Cascade)
+
+  @@unique([userId, appId])
+  @@map("user_games")
+  @@index([userId])
+  @@index([appId])
+  @@index([playtimeMinutes])
 }

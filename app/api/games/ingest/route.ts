@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateGameEmbedding } from '@/lib/embeddings';
 import { Prisma } from '@prisma/client';
+import {
+  fetchSteamAppDetails,
+  stripHtml,
+  extractReleaseYear,
+  fetchSteamReviewScore,
+  type SteamAppDetails,
+} from '@/lib/steam-api';
+import {
+  fetchSteamSpyData,
+  createEnrichedMetadata,
+} from '@/lib/steamspy-api';
 
 // Request body types
 interface GameIngestRequest {
@@ -16,44 +27,235 @@ interface BatchIngestRequest {
 }
 
 /**
- * Ingest a single game with embedding generation.
+ * Create cleaned metadata object from Steam API response.
  */
-async function ingestGame(game: GameIngestRequest) {
+function createCleanedMetadata(steamData: SteamAppDetails): Record<string, any> {
+  return {
+    // Core info
+    steam_appid: steamData.steam_appid,
+    type: steamData.type,
+    name: steamData.name,
+    
+    // Descriptions (cleaned)
+    short_description: stripHtml(steamData.short_description),
+    detailed_description: stripHtml(steamData.detailed_description),
+    about_the_game: stripHtml(steamData.about_the_game),
+    
+    // Taxonomies
+    genres: steamData.genres?.map(g => g.description) || [],
+    categories: steamData.categories?.map(c => c.description) || [],
+    
+    // Creators
+    developers: steamData.developers || [],
+    publishers: steamData.publishers || [],
+    
+    // Release info
+    release_date: steamData.release_date,
+    release_year: extractReleaseYear(steamData.release_date),
+    
+    // Platforms
+    platforms: steamData.platforms ? [
+      ...(steamData.platforms.windows ? ['windows'] : []),
+      ...(steamData.platforms.mac ? ['mac'] : []),
+      ...(steamData.platforms.linux ? ['linux'] : []),
+    ] : [],
+    
+    // Languages
+    supported_languages: steamData.supported_languages,
+    
+    // Reviews & ratings
+    recommendations: steamData.recommendations,
+    review_count: steamData.recommendations?.total || 0,
+    metacritic: steamData.metacritic,
+    metacritic_score: steamData.metacritic?.score || null,
+    
+    // Features
+    achievements: steamData.achievements,
+    achievement_count: steamData.achievements?.total || 0,
+    controller_support: steamData.controller_support,
+    
+    // Pricing
+    is_free: steamData.is_free,
+    price_overview: steamData.price_overview,
+    
+    // Content
+    content_descriptors: steamData.content_descriptors,
+    required_age: steamData.required_age,
+    
+    // Media (limited)
+    screenshots: steamData.screenshots?.slice(0, 5).map(s => ({
+      id: s.id,
+      thumbnail: s.path_thumbnail,
+      full: s.path_full,
+    })) || [],
+    movies: steamData.movies?.slice(0, 3).map(m => ({
+      id: m.id,
+      name: m.name,
+      thumbnail: m.thumbnail,
+      webm: m.webm?.max || m.webm?.['480'],
+    })) || [],
+    
+    // Images
+    header_image: steamData.header_image,
+    capsule_image: steamData.capsule_image,
+    background: steamData.background,
+    
+    // Related content
+    dlc: steamData.dlc || [],
+    
+    // Misc
+    website: steamData.website,
+    legal_notice: steamData.legal_notice,
+  };
+}
+
+/**
+ * Ingest a single game with embedding generation.
+ * Optionally fetches from Steam API if no metadata provided.
+ */
+async function ingestGame(game: GameIngestRequest, fetchFromSteam = true) {
   const { appId, name, description, metadata } = game;
 
-  // Extract genres from metadata if available
-  const genres = metadata?.genres as string[] | undefined;
+  let cleanedMetadata: Record<string, any> | undefined = metadata;
+  let steamData: SteamAppDetails | null = null;
 
-  // Generate embedding
+  // Fetch from Steam API if enabled and no metadata provided
+  if (fetchFromSteam && !metadata) {
+    steamData = await fetchSteamAppDetails(appId);
+    if (steamData) {
+      cleanedMetadata = createCleanedMetadata(steamData);
+    } else {
+      console.warn(`Could not fetch Steam data for ${appId}, using provided data only`);
+    }
+  }
+
+  // Fetch SteamSpy data for tags and accurate review scores (CRITICAL for accuracy)
+  let tags: string[] = [];
+  let reviewScoreFromSpy: number | null = null;
+  let reviewCountFinal: number | undefined = undefined;
+
+  if (fetchFromSteam) {
+    console.log(`Fetching SteamSpy data for ${appId}...`);
+    const steamSpyData = await fetchSteamSpyData(appId);
+
+    if (steamSpyData) {
+      const enriched = createEnrichedMetadata(steamSpyData);
+      tags = enriched.tags; // User-generated tags (most valuable!)
+      reviewScoreFromSpy = enriched.reviewScore;
+
+      // Update metadata with SteamSpy data
+      if (cleanedMetadata) {
+        cleanedMetadata.tags = tags;
+        cleanedMetadata.steamspy_review_score = reviewScoreFromSpy;
+        cleanedMetadata.ownership_estimate = enriched.ownershipEstimate;
+        cleanedMetadata.average_playtime_hours = enriched.averagePlaytime;
+        cleanedMetadata.median_playtime_hours = enriched.medianPlaytime;
+      }
+
+      console.log(`  Found ${tags.length} tags for ${name}`);
+    }
+
+    // Fetch accurate review score from Steam Reviews API (fallback if SteamSpy fails)
+    if (!reviewScoreFromSpy) {
+      console.log(`Fetching Steam review score for ${appId}...`);
+      const reviewData = await fetchSteamReviewScore(appId);
+
+      if (reviewData) {
+        reviewScoreFromSpy = reviewData.reviewPositivePct;
+        reviewCountFinal = reviewData.reviewCount;
+
+        if (cleanedMetadata) {
+          cleanedMetadata.steam_review_score = reviewScoreFromSpy;
+          cleanedMetadata.steam_review_count = reviewCountFinal;
+        }
+      }
+    }
+  }
+
+  // Extract fields for embedding and database columns
+  const gameMetadata = cleanedMetadata || {};
+  const gameName = steamData?.name || name;
+  const shortDesc = gameMetadata.short_description as string | undefined;
+  const detailedDesc = gameMetadata.detailed_description as string | undefined;
+  const aboutTheGame = gameMetadata.about_the_game as string | undefined;
+  const genres = gameMetadata.genres as string[] | undefined;
+  const categories = gameMetadata.categories as string[] | undefined;
+  const developers = gameMetadata.developers as string[] | undefined;
+  const publishers = gameMetadata.publishers as string[] | undefined;
+  const releaseYear = gameMetadata.release_year as number | undefined;
+  const reviewCount = reviewCountFinal || (gameMetadata.review_count as number | undefined);
+  const reviewPositivePct = reviewScoreFromSpy || (gameMetadata.review_positive_pct as number | undefined);
+  const metacriticScore = gameMetadata.metacritic_score as number | undefined;
+  const isFree = gameMetadata.is_free as boolean | undefined;
+  const gameType = gameMetadata.type as string | undefined;
+  const contentDescriptors = gameMetadata.content_descriptors?.notes as string | undefined;
+
+  // Generate embedding with comprehensive metadata INCLUDING TAGS (critical!)
   const embedding = await generateGameEmbedding({
-    name,
-    description,
+    name: gameName,
+    shortDescription: shortDesc,
+    detailedDescription: detailedDesc || description,
+    aboutTheGame,
     genres,
+    categories,
+    developers,
+    publishers,
+    releaseYear,
+    reviewCount,
+    reviewPositivePct,
+    metacriticScore,
+    isFree,
+    contentDescriptors,
+    tags, // USER-GENERATED TAGS - THE MOST VALUABLE SIGNAL
   });
 
   // Convert embedding array to pgvector format string
   const vectorString = `[${embedding.join(',')}]`;
 
-  // Use raw SQL to insert/update with vector type
-  // Prisma doesn't support Unsupported types in queries, so we use $executeRaw
+  // Use raw SQL to insert/update with vector type and new fields
   await prisma.$executeRaw`
-    INSERT INTO games (app_id, name, metadata, embedding, created_at, updated_at)
+    INSERT INTO games (
+      app_id,
+      name,
+      release_year,
+      review_positive_pct,
+      review_count,
+      is_free,
+      metacritic_score,
+      type,
+      metadata,
+      embedding,
+      created_at,
+      updated_at
+    )
     VALUES (
       ${BigInt(appId)},
-      ${name},
-      ${metadata ? JSON.stringify(metadata) : null}::jsonb,
+      ${gameName},
+      ${releaseYear || null},
+      ${reviewPositivePct || null},
+      ${reviewCount || null},
+      ${isFree !== undefined ? isFree : null},
+      ${metacriticScore || null},
+      ${gameType || null},
+      ${cleanedMetadata ? JSON.stringify(cleanedMetadata) : null}::jsonb,
       ${Prisma.raw(`'${vectorString}'::vector(384)`)},
       NOW(),
       NOW()
     )
     ON CONFLICT (app_id) DO UPDATE SET
       name = EXCLUDED.name,
+      release_year = EXCLUDED.release_year,
+      review_positive_pct = EXCLUDED.review_positive_pct,
+      review_count = EXCLUDED.review_count,
+      is_free = EXCLUDED.is_free,
+      metacritic_score = EXCLUDED.metacritic_score,
+      type = EXCLUDED.type,
       metadata = EXCLUDED.metadata,
       embedding = EXCLUDED.embedding,
       updated_at = NOW()
   `;
 
-  return { appId, name };
+  return { appId, name: gameName };
 }
 
 /**
