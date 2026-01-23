@@ -107,13 +107,13 @@ export async function POST(request: NextRequest) {
 /**
  * GET /api/user/feedback?userId=xxx&limit=50
  *
- * Get user's feedback history
+ * Get user's feedback history with full game details
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = parseInt(searchParams.get('limit') || '1000');
 
     if (!userId) {
       return NextResponse.json(
@@ -122,17 +122,53 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const feedback = await getUserFeedback(userId, limit);
+    // Fetch feedback with full game details including metadata
+    const { prisma } = await import('@/lib/prisma');
+
+    const feedback = await prisma.userFeedback.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: {
+        game: {
+          select: {
+            appId: true,
+            name: true,
+            metadata: true,
+          },
+        },
+      },
+    });
+
+    // Separate into liked and disliked
+    const liked = feedback
+      .filter((f) => f.feedbackType === 'love' || f.feedbackType === 'like')
+      .map((f) => ({
+        appId: f.game.appId.toString(),
+        name: f.game.name,
+        similarity: 0,
+        metadata: f.game.metadata,
+        feedbackType: f.feedbackType,
+        createdAt: f.createdAt.toISOString(),
+      }));
+
+    const disliked = feedback
+      .filter((f) => f.feedbackType === 'dislike' || f.feedbackType === 'not_interested')
+      .map((f) => ({
+        appId: f.game.appId.toString(),
+        name: f.game.name,
+        similarity: 0,
+        metadata: f.game.metadata,
+        feedbackType: f.feedbackType,
+        createdAt: f.createdAt.toISOString(),
+      }));
 
     return NextResponse.json({
       success: true,
-      feedback: feedback.map(f => ({
-        appId: f.appId.toString(), // Convert BigInt to string for JSON
-        feedbackType: f.feedbackType,
-        createdAt: f.createdAt.toISOString(),
-        gameName: f.gameName,
-      })),
-      count: feedback.length,
+      history: {
+        liked,
+        disliked,
+      },
     });
   } catch (error) {
     console.error('Get feedback API error:', error);
@@ -147,19 +183,18 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * DELETE /api/user/feedback?userId=xxx&appId=yyy
+ * DELETE /api/user/feedback
  *
- * Remove feedback for a game
+ * Remove feedback for a game (body contains userId and appId)
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const appIdStr = searchParams.get('appId');
+    const body = await request.json();
+    const { userId, appId: appIdStr } = body;
 
     if (!userId || !appIdStr) {
       return NextResponse.json(
-        { error: 'Missing userId or appId parameter' },
+        { error: 'Missing userId or appId in request body' },
         { status: 400 }
       );
     }

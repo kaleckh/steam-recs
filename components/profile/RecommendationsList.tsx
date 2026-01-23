@@ -12,6 +12,7 @@ interface RecommendationsListProps {
   totalPlaytimeHours?: number;
   userId?: string;
   isPremium?: boolean;
+  onRatingSubmitted?: () => void;
 }
 
 export default function RecommendationsList({
@@ -20,6 +21,7 @@ export default function RecommendationsList({
   totalPlaytimeHours,
   userId,
   isPremium = true, // Default to true - everyone gets feedback features for now
+  onRatingSubmitted,
 }: RecommendationsListProps) {
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [recommendations, setRecommendations] = useState<GameRecommendation[]>(initialRecommendations);
@@ -58,20 +60,22 @@ export default function RecommendationsList({
 
     showToastNotification(toastMessages[feedbackType], 'success');
 
-    // For negative feedback, remove the card after fade out
-    if (feedbackType === 'dislike' || feedbackType === 'not_interested') {
-      setTimeout(() => {
-        setRecommendations(prev => prev.filter(game => game.appId !== appId));
-
-        // Fetch one new game to replace the removed one
-        if (userId) {
-          fetchMoreRecommendations(1);
-        }
-      }, 600); // Wait for fade animation
+    // Notify parent that a rating was submitted
+    if (onRatingSubmitted) {
+      onRatingSubmitted();
     }
 
-    // Note: We don't call onFeedbackSubmitted() here to avoid race conditions
-    // The learned vector is already updated by the feedback API call
+    // Remove the card after fade out for ALL feedback types
+    setTimeout(() => {
+      setRecommendations(prev => prev.filter(game => game.appId !== appId));
+
+      // Fetch one new game to replace the removed one
+      if (userId) {
+        fetchMoreRecommendations(1);
+      }
+    }, 600); // Wait for fade animation
+
+    // Note: The learned vector is already updated by the feedback API call
     // New recommendations will use the updated vector automatically
   };
 
@@ -221,18 +225,38 @@ export default function RecommendationsList({
       </div>
 
       {/* Recommendations Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 transition-all duration-500">
         {recommendations.map((game) => (
-          <GameCard
+          <div
             key={game.appId}
-            game={game}
-            userId={userId}
-            isPremium={isPremium}
-            onFeedbackSubmitted={handleFeedback}
-            onPremiumRequired={() => setShowPremiumModal(true)}
-          />
+            className="transition-all duration-500 ease-in-out"
+            style={{
+              animation: `slideIn 0.6s ease-out both`,
+            }}
+          >
+            <GameCard
+              game={game}
+              userId={userId}
+              isPremium={isPremium}
+              onFeedbackSubmitted={handleFeedback}
+              onPremiumRequired={() => setShowPremiumModal(true)}
+            />
+          </div>
         ))}
       </div>
+
+      <style jsx>{`
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+      `}</style>
 
       {/* Infinite Scroll Trigger */}
       {hasMore && userId && (

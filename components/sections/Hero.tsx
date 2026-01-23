@@ -1,68 +1,40 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Headline from '../ui/Headline';
-import Subtext from '../ui/Subtext';
-import StatsGrid from '../ui/StatsGrid';
 
 export default function Hero() {
   const router = useRouter();
-  const [steamInput, setSteamInput] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (steamInput.trim()) {
-      router.push(`/profile?steamId=${encodeURIComponent(steamInput.trim())}`);
-    }
-  };
 
   const handleGetStarted = () => {
     router.push('/profile');
   };
 
   return (
-    <section className="bg-gradient-to-b from-blue-50 to-white py-20 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col items-center text-center space-y-12">
+    <section className="py-32 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto">
+        <div className="flex flex-col items-center text-center space-y-10">
           {/* Hero Content */}
-          <div className="space-y-6 max-w-3xl">
-            <Headline>AI powered game recommendations</Headline>
-            <Subtext>
-              Add your Steam profile and get personalized recommendations
-            </Subtext>
+          <div className="space-y-6 max-w-4xl">
+            <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-white drop-shadow-lg leading-tight">
+              Find Your Next Favorite Game
+            </h1>
+            <p className="text-2xl md:text-3xl text-[#c7d5e0] max-w-3xl mx-auto">
+              AI-powered recommendations based on your Steam library
+            </p>
           </div>
 
-          {/* Steam ID Input Form */}
-          <form onSubmit={handleSubmit} className="w-full max-w-2xl space-y-4">
-            <input
-              type="text"
-              value={steamInput}
-              onChange={(e) => setSteamInput(e.target.value)}
-              placeholder="Enter your Steam ID or profile URL"
-              className="w-full px-8 py-6 text-lg text-gray-900 placeholder-gray-500 bg-white border-2 border-blue-300 rounded-xl shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-400 focus:border-blue-500 transition-all duration-200 hover:border-blue-400"
-              aria-label="Enter your Steam ID to get recommendations"
-            />
-            <div className="flex gap-4">
-              <button
-                type="submit"
-                disabled={!steamInput.trim()}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-300"
-              >
-                Get Recommendations
-              </button>
-              <button
-                type="button"
-                onClick={handleGetStarted}
-                className="flex-1 bg-white hover:bg-gray-50 text-blue-600 font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl border-2 border-blue-600 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-300"
-              >
-                Get Started
-              </button>
-            </div>
-          </form>
+          {/* CTA Button */}
+          <button
+            onClick={handleGetStarted}
+            className="bg-gradient-to-r from-[#06BFFF] to-[#2571CE] hover:from-[#1999FF] hover:to-[#1C5FA8] text-white text-xl font-bold py-6 px-12 rounded-xl shadow-2xl hover:shadow-[#66c0f4]/50 transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-[#66c0f4]/50"
+          >
+            Get My Recommendations
+          </button>
 
-          {/* Stats Grid */}
-          <StatsGrid />
+          {/* Subtext */}
+          <p className="text-[#8f98a0] text-sm">
+            Free • No signup required • Takes 30 seconds
+          </p>
         </div>
       </div>
     </section>

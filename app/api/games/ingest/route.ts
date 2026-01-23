@@ -82,18 +82,9 @@ function createCleanedMetadata(steamData: SteamAppDetails): Record<string, any> 
     content_descriptors: steamData.content_descriptors,
     required_age: steamData.required_age,
     
-    // Media (limited)
-    screenshots: steamData.screenshots?.slice(0, 5).map(s => ({
-      id: s.id,
-      thumbnail: s.path_thumbnail,
-      full: s.path_full,
-    })) || [],
-    movies: steamData.movies?.slice(0, 3).map(m => ({
-      id: m.id,
-      name: m.name,
-      thumbnail: m.thumbnail,
-      webm: m.webm?.max || m.webm?.['480'],
-    })) || [],
+    // Media (save ALL screenshots and movies, not limited)
+    screenshots: steamData.screenshots || [],
+    movies: steamData.movies || [],
     
     // Images
     header_image: steamData.header_image,

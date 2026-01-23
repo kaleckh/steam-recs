@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   ingestUserProfile,
   getRecommendations,
@@ -14,6 +14,8 @@ import LoadingState from '@/components/profile/LoadingState';
 import ErrorDisplay from '@/components/profile/ErrorDisplay';
 import RecommendationsList from '@/components/profile/RecommendationsList';
 import FilterControls from '@/components/profile/FilterControls';
+import ChatPrompt from '@/components/profile/ChatPrompt';
+import AlgorithmAccuracy from '@/components/profile/AlgorithmAccuracy';
 
 // LocalStorage keys
 const STORAGE_KEYS = {
@@ -22,6 +24,7 @@ const STORAGE_KEYS = {
   LAST_UPDATED: 'steamRecLastUpdated',
   GAMES_ANALYZED: 'steamRecGamesAnalyzed',
   TOTAL_PLAYTIME: 'steamRecTotalPlaytime',
+  RATINGS_COUNT: 'steamRecRatingsCount',
 };
 
 type ProfileState =
@@ -40,6 +43,7 @@ type ProfileState =
   | { stage: 'error'; error: string };
 
 export default function ProfilePage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [state, setState] = useState<ProfileState>({ stage: 'input' });
   const [filters, setFilters] = useState<RecommendationFilters>({
@@ -50,12 +54,23 @@ export default function ProfilePage() {
   });
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const [isApplyingFilters, setIsApplyingFilters] = useState(false);
+  const [ratingsCount, setRatingsCount] = useState(0);
+  const [topGames, setTopGames] = useState<Array<{
+    appId: string;
+    name: string;
+    playtimeHours: number;
+    headerImage?: string;
+  }>>([]);
 
   // Check for existing session on mount
   useEffect(() => {
     const savedUserId = localStorage.getItem(STORAGE_KEYS.USER_ID);
     const savedSteamId = localStorage.getItem(STORAGE_KEYS.STEAM_ID);
     const steamIdParam = searchParams.get('steamId');
+
+    // Load ratings count from localStorage
+    const savedRatingsCount = parseInt(localStorage.getItem(STORAGE_KEYS.RATINGS_COUNT) || '0');
+    setRatingsCount(savedRatingsCount);
 
     if (steamIdParam) {
       // If Steam ID in URL, start ingestion
@@ -93,6 +108,9 @@ export default function ProfilePage() {
         totalPlaytimeHours,
         lastUpdated,
       });
+
+      // Fetch top games
+      fetchTopGames(userId);
     } else {
       setState({
         stage: 'error',
@@ -100,6 +118,20 @@ export default function ProfilePage() {
           result.error || 'Failed to load recommendations'
         ),
       });
+    }
+  };
+
+  // Fetch user's top played games
+  const fetchTopGames = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/user/top-games?userId=${userId}&limit=5`);
+      const data = await response.json();
+
+      if (data.success && data.games) {
+        setTopGames(data.games);
+      }
+    } catch (error) {
+      console.error('Failed to fetch top games:', error);
     }
   };
 
@@ -142,6 +174,9 @@ export default function ProfilePage() {
           totalPlaytimeHours: result.totalPlaytimeHours,
           lastUpdated: new Date(),
         });
+
+        // Fetch top games
+        fetchTopGames(result.userId);
       } else {
         setState({
           stage: 'error',
@@ -208,16 +243,29 @@ export default function ProfilePage() {
     setState({ stage: 'input' });
   };
 
+  // Handle semantic search query from ChatPrompt
+  const handleChatQuery = (query: string) => {
+    // Navigate to search page with query
+    router.push(`/search?q=${encodeURIComponent(query)}`);
+  };
+
+  // Handle rating submitted - increment count in state and localStorage
+  const handleRatingSubmitted = () => {
+    const newCount = ratingsCount + 1;
+    setRatingsCount(newCount);
+    localStorage.setItem(STORAGE_KEYS.RATINGS_COUNT, String(newCount));
+  };
+
   // Render based on state
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Your Personalized Game Recommendations
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-bold text-gray-900 mb-3 tracking-tight">
+            Your Personalized Recommendations
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-gray-500">
             Powered by AI analysis of your Steam profile and playtime
           </p>
         </div>
@@ -241,22 +289,93 @@ export default function ProfilePage() {
 
         {state.stage === 'recommendations' && (
           <div className="space-y-8">
-            {/* Update Profile Button */}
+            {/* User Profile Info */}
             <div className="flex justify-center">
-              <div className="bg-white rounded-xl shadow-lg px-6 py-4 border border-gray-200 flex items-center justify-between space-x-6">
-                <div className="text-sm text-gray-600">
-                  <strong>Steam ID:</strong> {state.steamId}
-                  <span className="mx-3">•</span>
-                  <strong>Last Updated:</strong>{' '}
-                  {state.lastUpdated.toLocaleDateString()}
+              <div className="bg-white rounded-2xl shadow-sm px-8 py-6 border border-gray-100 w-full max-w-6xl">
+                <div className="flex items-start justify-between mb-6">
+                  {/* Left: User Info */}
+                  <div className="flex items-center gap-4">
+                    {/* Steam Avatar Placeholder - TODO: fetch from Steam API */}
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg">
+                      {state.steamId.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">
+                        Steam User
+                      </h2>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {state.gamesAnalyzed} games • {state.totalPlaytimeHours ? `${Math.round(state.totalPlaytimeHours).toLocaleString()} hours` : 'analyzing...'}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Updated {state.lastUpdated.toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right: Update Button */}
+                  <button
+                    onClick={handleUpdateProfile}
+                    className="bg-gray-900 hover:bg-gray-800 text-white font-medium py-3 px-6 rounded-xl shadow-sm hover:shadow-md transform hover:scale-[1.02] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Update Profile
+                  </button>
                 </div>
-                <button
-                  onClick={handleUpdateProfile}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg shadow hover:shadow-lg transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-300"
-                >
-                  Update Profile
-                </button>
+
+                {/* Top Games */}
+                {topGames.length > 0 && (
+                  <div className="border-t border-gray-100 pt-6">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Most Played Games</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                      {topGames.map((game) => (
+                        <a
+                          key={game.appId}
+                          href={`https://store.steampowered.com/app/${game.appId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group relative"
+                        >
+                          <div className="aspect-[460/215] bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg overflow-hidden shadow-sm group-hover:shadow-lg transition-all">
+                            {game.headerImage ? (
+                              <img
+                                src={game.headerImage}
+                                alt={game.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-500">
+                                <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                                  <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-2">
+                            <p className="text-xs font-medium text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">{game.name}</p>
+                            <p className="text-xs text-gray-500">{game.playtimeHours.toLocaleString()} hrs</p>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
+            </div>
+
+            {/* Algorithm Accuracy & Chat Prompt */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <AlgorithmAccuracy
+                ratingsCount={ratingsCount}
+                gamesAnalyzed={state.gamesAnalyzed}
+                userId={state.userId}
+              />
+              <ChatPrompt
+                onSubmit={handleChatQuery}
+                isLoading={false}
+              />
             </div>
 
             {/* Filters */}
@@ -305,6 +424,7 @@ export default function ProfilePage() {
                 totalPlaytimeHours={state.totalPlaytimeHours}
                 userId={state.userId}
                 isPremium={true}
+                onRatingSubmitted={handleRatingSubmitted}
               />
             )}
           </div>

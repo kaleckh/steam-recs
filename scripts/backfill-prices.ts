@@ -1,12 +1,12 @@
 import { prisma } from '../lib/prisma';
 
 /**
- * Backfill script to fetch prices for existing games missing price_overview data
+ * Backfill script to fetch prices, screenshots, and movies for existing games
  *
  * Usage: npx tsx scripts/backfill-prices.ts
  */
 
-interface SteamPriceResponse {
+interface SteamMediaResponse {
   [appId: string]: {
     success: boolean;
     data?: {
@@ -19,14 +19,45 @@ interface SteamPriceResponse {
         final_formatted: string;
       };
       is_free?: boolean;
+      screenshots?: Array<{
+        id: number;
+        path_thumbnail: string;
+        path_full: string;
+      }>;
+      movies?: Array<{
+        id: number;
+        name: string;
+        thumbnail: string;
+        webm?: {
+          480?: string;
+          max?: string;
+        };
+        mp4?: {
+          480?: string;
+          max?: string;
+        };
+        highlight: boolean;
+      }>;
     };
   };
 }
 
-async function fetchPriceData(appId: string): Promise<any | null> {
+async function fetchMediaData(appId: string): Promise<{
+  price_overview?: any;
+  screenshots?: any[];
+  movies?: any[];
+  pc_requirements?: any;
+  mac_requirements?: any;
+  linux_requirements?: any;
+  background?: string;
+  background_raw?: string;
+  legal_notice?: string;
+  supported_languages?: string;
+  controller_support?: string;
+} | null> {
   try {
     const response = await fetch(
-      `https://store.steampowered.com/api/appdetails?appids=${appId}&filters=price_overview`,
+      `https://store.steampowered.com/api/appdetails?appids=${appId}&filters=price_overview,screenshots,movies,platforms,pc_requirements,mac_requirements,linux_requirements,background,background_raw,legal_notice,supported_languages,controller_support`,
       {
         headers: {
           'User-Agent': 'Mozilla/5.0 (compatible; SteamRecsBot/1.0)',
@@ -39,25 +70,36 @@ async function fetchPriceData(appId: string): Promise<any | null> {
       return null;
     }
 
-    const data: SteamPriceResponse = await response.json();
+    const data: SteamMediaResponse = await response.json();
     const appData = data[appId];
 
     if (!appData?.success || !appData.data) {
       return null;
     }
 
-    return appData.data.price_overview || null;
+    return {
+      price_overview: appData.data.price_overview || null,
+      screenshots: appData.data.screenshots || [],
+      movies: appData.data.movies || [],
+      pc_requirements: (appData.data as any).pc_requirements || null,
+      mac_requirements: (appData.data as any).mac_requirements || null,
+      linux_requirements: (appData.data as any).linux_requirements || null,
+      background: (appData.data as any).background || null,
+      background_raw: (appData.data as any).background_raw || null,
+      legal_notice: (appData.data as any).legal_notice || null,
+      supported_languages: (appData.data as any).supported_languages || null,
+      controller_support: (appData.data as any).controller_support || null,
+    };
   } catch (error) {
-    console.error(`Failed to fetch price for app ${appId}:`, error);
+    console.error(`Failed to fetch data for app ${appId}:`, error);
     return null;
   }
 }
 
 async function main() {
-  console.log('🔍 Finding games without price data...\n');
+  console.log('🔍 Finding games without price/media data...\n');
 
-  // Find all games - we'll filter for missing price_overview in JavaScript
-  // Prisma doesn't support checking for missing JSON keys easily
+  // Find all games - we'll filter for missing data in JavaScript
   const allGames = await prisma.game.findMany({
     select: {
       appId: true,
@@ -69,16 +111,16 @@ async function main() {
     },
   });
 
-  // Filter games that don't have price_overview in metadata
-  const gamesWithoutPrices = allGames.filter((game) => {
+  // Filter games that don't have price_overview, screenshots, or movies
+  const gamesNeedingUpdate = allGames.filter((game) => {
     const metadata = game.metadata as any;
-    return !metadata || !metadata.price_overview;
+    return !metadata || !metadata.price_overview || !metadata.screenshots || !metadata.movies;
   });
 
-  console.log(`Found ${gamesWithoutPrices.length} games without price data\n`);
+  console.log(`Found ${gamesNeedingUpdate.length} games needing price/media updates\n`);
 
-  if (gamesWithoutPrices.length === 0) {
-    console.log('✅ All games already have price data!');
+  if (gamesNeedingUpdate.length === 0) {
+    console.log('✅ All games already have price and media data!');
     await prisma.$disconnect();
     return;
   }
@@ -90,25 +132,35 @@ async function main() {
 
   const DELAY_MS = 1500; // 1.5 seconds between requests to avoid rate limiting
 
-  for (const game of gamesWithoutPrices) {
+  for (const game of gamesNeedingUpdate) {
     const appId = game.appId.toString();
     processed++;
 
-    console.log(`[${processed}/${gamesWithoutPrices.length}] Processing: ${game.name} (${appId})`);
+    console.log(`[${processed}/${gamesNeedingUpdate.length}] Processing: ${game.name} (${appId})`);
 
-    // Fetch price data from Steam
-    const priceOverview = await fetchPriceData(appId);
+    // Fetch price and media data from Steam
+    const mediaData = await fetchMediaData(appId);
 
-    if (priceOverview === null) {
-      console.log(`  ⚠️  No price data available\n`);
+    if (mediaData === null) {
+      console.log(`  ⚠️  No data available\n`);
       skipped++;
     } else {
-      // Update the game's metadata with price_overview
+      // Update the game's metadata with new data
       try {
         const currentMetadata = (game.metadata as any) || {};
         const updatedMetadata = {
           ...currentMetadata,
-          price_overview: priceOverview,
+          price_overview: mediaData.price_overview || currentMetadata.price_overview,
+          screenshots: mediaData.screenshots || currentMetadata.screenshots || [],
+          movies: mediaData.movies || currentMetadata.movies || [],
+          pc_requirements: mediaData.pc_requirements || currentMetadata.pc_requirements,
+          mac_requirements: mediaData.mac_requirements || currentMetadata.mac_requirements,
+          linux_requirements: mediaData.linux_requirements || currentMetadata.linux_requirements,
+          background: mediaData.background || currentMetadata.background,
+          background_raw: mediaData.background_raw || currentMetadata.background_raw,
+          legal_notice: mediaData.legal_notice || currentMetadata.legal_notice,
+          supported_languages: mediaData.supported_languages || currentMetadata.supported_languages,
+          controller_support: mediaData.controller_support || currentMetadata.controller_support,
         };
 
         await prisma.game.update({
@@ -118,8 +170,10 @@ async function main() {
           },
         });
 
-        const priceStr = priceOverview.final_formatted || 'Free';
-        console.log(`  ✅ Updated with price: ${priceStr}\n`);
+        const priceStr = mediaData.price_overview?.final_formatted || 'Free';
+        const screenshotCount = mediaData.screenshots?.length || 0;
+        const movieCount = mediaData.movies?.length || 0;
+        console.log(`  ✅ Updated - Price: ${priceStr}, Screenshots: ${screenshotCount}, Movies: ${movieCount}\n`);
         updated++;
       } catch (error) {
         console.error(`  ❌ Failed to update database:`, error);
@@ -129,7 +183,7 @@ async function main() {
     }
 
     // Rate limiting: wait between requests
-    if (processed < gamesWithoutPrices.length) {
+    if (processed < gamesNeedingUpdate.length) {
       await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
     }
   }

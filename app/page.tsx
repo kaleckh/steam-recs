@@ -1,17 +1,17 @@
 import Hero from '@/components/sections/Hero';
-import DiscoverSection from '@/components/sections/DiscoverSection';
+import HowItWorksSection from '@/components/sections/HowItWorksSection';
 import SteamByTheNumbersSection from '@/components/sections/SteamByTheNumbersSection';
-import DailyChallengeSection from '@/components/sections/DailyChallengeSection';
 import Footer from '@/components/ui/Footer';
+import AnimatedBackground from '@/components/ui/AnimatedBackground';
 
 export default function Home() {
   return (
     <>
-      <main>
+      <AnimatedBackground />
+      <main className="relative">
         <Hero />
-        <DiscoverSection />
+        <HowItWorksSection />
         <SteamByTheNumbersSection />
-        <DailyChallengeSection />
       </main>
       <Footer />
     </>

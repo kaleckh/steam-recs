@@ -55,19 +55,13 @@ export default function GameCard({
     if (result.success) {
       setFeedbackGiven(type);
 
-      // For negative feedback, fade out and remove the card
-      if (type === 'dislike' || type === 'not_interested') {
-        setIsFadingOut(true);
-        // Wait for fade animation, then notify parent
-        setTimeout(() => {
-          onFeedbackSubmitted?.(type, game.appId);
-        }, 500);
-      } else {
-        // For positive feedback, just notify immediately
+      // Fade out ALL rated games (like, love, dislike, not_interested)
+      setIsFadingOut(true);
+
+      // Wait for fade animation, then notify parent
+      setTimeout(() => {
         onFeedbackSubmitted?.(type, game.appId);
-        // Reset feedback visual after 2 seconds
-        setTimeout(() => setFeedbackGiven(null), 2000);
-      }
+      }, 500);
     } else if (result.requiresPremium) {
       onPremiumRequired?.();
     }
@@ -78,7 +72,7 @@ export default function GameCard({
   return (
     <div
       className={`bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-500 border border-gray-200 hover:border-blue-400 ${
-        isFadingOut ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
+        isFadingOut ? 'opacity-0 scale-90 -translate-y-4 pointer-events-none' : 'opacity-100 scale-100 translate-y-0'
       }`}
     >
       <a

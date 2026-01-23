@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
-import { getHybridVector, getNotInterestedGames } from '@/lib/vector-learning';
+import { getHybridVector } from '@/lib/vector-learning';
 
 /**
  * POST /api/user/recommend
@@ -121,15 +121,19 @@ export async function POST(request: NextRequest) {
       ownedAppIds = ownedGames.map(g => g.appId);
     }
 
-    // Get games marked as "not interested" (PREMIUM FEATURE)
-    // These games are permanently excluded from recommendations
-    let notInterestedAppIds: bigint[] = [];
+    // Get all games that have been rated (to exclude from recommendations)
+    // This includes: like, love, dislike, not_interested
+    let ratedAppIds: bigint[] = [];
 
-    // TODO: For now, everyone gets this feature (will restrict to premium later)
-    notInterestedAppIds = await getNotInterestedGames(body.userId);
+    const ratedGames = await prisma.userFeedback.findMany({
+      where: { userId: body.userId },
+      select: { appId: true },
+    });
 
-    // Combine owned and not interested games for exclusion
-    const excludeAppIds = [...ownedAppIds, ...notInterestedAppIds];
+    ratedAppIds = ratedGames.map(g => g.appId);
+
+    // Combine owned and rated games for exclusion
+    const excludeAppIds = [...ownedAppIds, ...ratedAppIds];
 
     // Build filter conditions
     const filters = body.filters || {};
