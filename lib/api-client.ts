@@ -13,6 +13,8 @@ export interface IngestResponse {
   success: boolean;
   userId?: string;
   steamId?: string;
+  username?: string;
+  avatarUrl?: string;
   gamesImported?: number;
   gamesAnalyzed?: number;
   totalPlaytimeHours?: number;

@@ -261,6 +261,24 @@ export async function POST(request: NextRequest) {
       const metadata = game.metadata || {};
       const priceOverview = metadata.price_overview as any;
 
+      // Extract genres from metadata - handle both string[] and object[] formats
+      let genres: string[] = [];
+      if (metadata.genres) {
+        if (Array.isArray(metadata.genres)) {
+          genres = metadata.genres.map((g: any) =>
+            typeof g === 'string' ? g : (g.description || g.name || String(g))
+          );
+        }
+      }
+
+      // Also add categories as additional tags
+      if (metadata.categories && Array.isArray(metadata.categories)) {
+        const categories = metadata.categories
+          .map((c: any) => typeof c === 'string' ? c : (c.description || c.name))
+          .filter((c: string) => c && !genres.includes(c)); // Avoid duplicates
+        genres = [...genres, ...categories].slice(0, 8); // Limit to 8 total tags
+      }
+
       return {
         appId: game.app_id.toString(),
         name: game.name,
@@ -273,7 +291,7 @@ export async function POST(request: NextRequest) {
         isFree: game.is_free,
         price: priceOverview?.final_formatted as string | undefined,
         priceRaw: priceOverview?.final as number | undefined,
-        genres: metadata.genres as string[] | undefined,
+        genres: genres.length > 0 ? genres : undefined,
         shortDescription: metadata.short_description as string | undefined,
         headerImage: metadata.header_image as string | undefined,
         developers: metadata.developers as string[] | undefined,

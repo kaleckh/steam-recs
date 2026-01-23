@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     // Fetch user's top games by playtime with game metadata
     const topGames = await prisma.userGame.findMany({
       where: { userId },
-      orderBy: { playtimeForever: 'desc' },
+      orderBy: { playtimeMinutes: 'desc' },
       take: limit,
       include: {
         game: {
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const games = topGames.map((ug) => ({
       appId: ug.game.appId.toString(),
       name: ug.game.name,
-      playtimeHours: Math.round(ug.playtimeForever / 60),
+      playtimeHours: Math.round(ug.playtimeMinutes / 60),
       headerImage: (ug.game.metadata as any)?.header_image || (ug.game.metadata as any)?.headerImage,
     }));
 

@@ -111,32 +111,49 @@ export default function GameDetailPage() {
 
   if (error || !game) {
     return (
-      <div className="min-h-screen bg-[#1b2838] py-12 px-4">
-        <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-3xl font-bold text-white mb-4">Game Not Found</h1>
-          <p className="text-gray-400 mb-8">{error || 'The game you are looking for does not exist.'}</p>
-          <button
-            onClick={() => router.back()}
-            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded transition-colors"
-          >
-            Go Back
-          </button>
+      <div className="min-h-screen bg-[#0a0a0f] py-12 px-4 grid-pattern relative">
+        <div className="crt-scanlines" />
+        <div className="crt-vignette" />
+        <div className="max-w-7xl mx-auto text-center relative z-10">
+          <div className="terminal-box rounded-lg p-12 max-w-lg mx-auto">
+            <div className="terminal-header mb-6">
+              <span className="text-gray-400 text-sm font-mono ml-16">ERROR_404.log</span>
+            </div>
+            <div className="text-neon-orange text-6xl font-bold orbitron mb-4">404</div>
+            <h1 className="text-2xl font-bold text-white mb-4 orbitron">GAME NOT FOUND</h1>
+            <p className="text-gray-400 mb-8 font-mono">
+              {error || 'The game you are looking for does not exist in our database.'}
+            </p>
+            <button
+              onClick={() => router.back()}
+              className="btn-arcade rounded-lg inline-flex items-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              GO BACK
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#1b2838]">
+    <div className="min-h-screen bg-[#0a0a0f] grid-pattern relative">
+      {/* CRT Effects */}
+      <div className="crt-scanlines" />
+      <div className="crt-vignette" />
+
       {/* Header with Back Button */}
-      <div className="bg-[#171a21] border-b border-[#2a475e]">
+      <div className="border-b border-terminal-border bg-terminal-dark/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-[1800px] mx-auto px-6 py-4">
           <button
             onClick={() => router.back()}
-            className="text-[#c7d5e0] hover:text-white transition-colors text-sm flex items-center gap-2"
+            className="text-gray-400 hover:text-neon-cyan transition-colors text-sm flex items-center gap-2 font-mono group"
           >
             <svg
-              className="w-4 h-4"
+              className="w-4 h-4 group-hover:-translate-x-1 transition-transform"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -148,13 +165,13 @@ export default function GameDetailPage() {
                 d="M10 19l-7-7m0 0l7-7m-7 7h18"
               />
             </svg>
-            Back
+            <span className="text-neon-green">&gt;</span> BACK
           </button>
         </div>
       </div>
 
       {/* Main Content - Two Column Layout */}
-      <div className="max-w-[1800px] mx-auto px-6 py-8">
+      <div className="max-w-[1800px] mx-auto px-6 py-8 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_450px] gap-8">
           {/* Left Column - Videos & Description */}
           <div className="space-y-8">

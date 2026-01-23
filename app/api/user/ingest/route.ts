@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import {
   extractSteamId,
   getSteamOwnedGames,
-  isSteamProfilePublic,
+  getSteamPlayerSummary,
   getSteamUserGameAchievements,
 } from '@/lib/steam-user-api';
 import { updateUserPreferenceVector, UserGameData } from '@/lib/user-preference-vector';
@@ -59,13 +59,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if profile is public
-    const isPublic = await isSteamProfilePublic(steamId, steamApiKey);
+    // Get player profile summary (includes username and avatar)
+    const playerSummary = await getSteamPlayerSummary(steamId, steamApiKey);
 
-    if (!isPublic) {
+    if (!playerSummary) {
+      return NextResponse.json(
+        { error: 'Could not fetch Steam profile. Please try again.' },
+        { status: 404 }
+      );
+    }
+
+    // Check if profile is public (communityvisibilitystate: 3 = public)
+    if (playerSummary.communityvisibilitystate !== 3) {
       return NextResponse.json(
         {
-          error: 'Steam profile is private or has no games. Please set profile to public.',
+          error: 'Steam profile is private. Please set profile to public.',
           steamId,
         },
         { status: 403 }
@@ -222,6 +230,8 @@ export async function POST(request: NextRequest) {
       success: true,
       userId,
       steamId,
+      username: playerSummary.personaname,
+      avatarUrl: playerSummary.avatarfull,
       gamesImported: userGamesData.length,
       gamesAnalyzed: result.gamesAnalyzed,
       totalPlaytimeHours: Math.round(totalPlaytimeHours),

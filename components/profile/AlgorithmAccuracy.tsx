@@ -1,104 +1,209 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+
 interface AlgorithmAccuracyProps {
   ratingsCount: number;
   gamesAnalyzed: number;
   userId?: string;
 }
 
+interface RatingBreakdown {
+  positive: number;
+  negative: number;
+}
+
 export default function AlgorithmAccuracy({ ratingsCount, gamesAnalyzed, userId }: AlgorithmAccuracyProps) {
-  // Determine status message based on ratings
+  const [breakdown, setBreakdown] = useState<RatingBreakdown>({ positive: 0, negative: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchBreakdown() {
+      if (!userId || ratingsCount === 0) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/user/feedback?userId=${userId}`);
+        const data = await response.json();
+
+        if (data.success) {
+          setBreakdown({
+            positive: data.history.liked?.length || 0,
+            negative: data.history.disliked?.length || 0,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch rating breakdown:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchBreakdown();
+  }, [userId, ratingsCount]);
+
   const getStatusMessage = () => {
-    if (ratingsCount === 0) return "Start rating games to personalize recommendations";
-    if (ratingsCount < 5) return "Getting started";
-    if (ratingsCount < 15) return "Building your profile";
-    if (ratingsCount < 30) return "Profile looking good";
-    return "Highly personalized profile";
+    if (ratingsCount === 0) return "AWAITING_INPUT";
+    if (ratingsCount < 5) return "CALIBRATING";
+    if (ratingsCount < 15) return "LEARNING";
+    if (ratingsCount < 30) return "OPTIMIZED";
+    return "HIGHLY_TRAINED";
   };
 
-  const getRatingColor = () => {
-    if (ratingsCount === 0) return "text-gray-400";
-    if (ratingsCount < 5) return "text-yellow-600";
-    if (ratingsCount < 15) return "text-blue-600";
-    return "text-green-600";
+  const getStatusColor = () => {
+    if (ratingsCount === 0) return "text-gray-500";
+    if (ratingsCount < 5) return "text-neon-yellow";
+    if (ratingsCount < 15) return "text-neon-cyan";
+    return "text-neon-green";
   };
 
-  const getProgressPercentage = () => {
-    // Progress caps at 50 ratings for visual purposes
-    // Always show at least 2% so there's a visible starting point
-    const percentage = (ratingsCount / 50) * 100;
-    return ratingsCount === 0 ? 0 : Math.max(2, Math.min(100, percentage));
+  const getProgressLevel = () => {
+    if (ratingsCount === 0) return 0;
+    if (ratingsCount < 5) return 25;
+    if (ratingsCount < 15) return 50;
+    if (ratingsCount < 30) return 75;
+    return 100;
   };
+
+  const positivePercentage = ratingsCount > 0 ? (breakdown.positive / ratingsCount) * 100 : 0;
+  const negativePercentage = ratingsCount > 0 ? (breakdown.negative / ratingsCount) * 100 : 0;
 
   return (
-    <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-1">Your Feedback</h3>
-          <p className="text-sm text-gray-500">{getStatusMessage()}</p>
-        </div>
-        <div className={`text-5xl font-bold ${getRatingColor()}`}>
-          {ratingsCount}
-        </div>
+    <div className="terminal-box rounded-lg overflow-hidden">
+      <div className="terminal-header">
+        <span className="text-gray-400 text-sm font-mono ml-16">FEEDBACK_STATS.dat</span>
       </div>
 
-      {/* Progress Bar */}
-      <div className="mb-6">
-        <div className="h-2 bg-gray-100 rounded-full overflow-hidden relative">
-          {ratingsCount === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-xs text-gray-400 font-medium">Start rating to build your profile</div>
+      <div className="p-8">
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h3 className="orbitron text-xl font-bold text-white mb-2">NEURAL FEEDBACK</h3>
+            <p className={`text-sm font-mono ${getStatusColor()}`}>
+              <span className="text-gray-500">&gt;</span> STATUS: {getStatusMessage()}
+            </p>
+          </div>
+          <div className="text-right">
+            <div className={`orbitron text-4xl font-black ${getStatusColor()}`}>
+              {ratingsCount}
             </div>
-          ) : (
+            <div className="text-xs text-gray-500 uppercase tracking-wider mt-1">RATINGS</div>
+          </div>
+        </div>
+
+        {/* Training Progress */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between text-xs font-mono mb-2">
+            <span className="text-gray-500">TRAINING_LEVEL</span>
+            <span className={getStatusColor()}>{getProgressLevel()}%</span>
+          </div>
+          <div className="h-2 progress-bar-retro rounded overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500 ease-out rounded-full"
-              style={{ width: `${getProgressPercentage()}%` }}
-            ></div>
-          )}
+              className={`h-full transition-all duration-700 ${
+                ratingsCount >= 30 ? 'progress-fill-green' :
+                ratingsCount >= 15 ? 'progress-fill-cyan' :
+                'bg-neon-yellow'
+              }`}
+              style={{ width: `${getProgressLevel()}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-[10px] text-gray-600 mt-1 font-mono">
+            <span>INIT</span>
+            <span>5</span>
+            <span>15</span>
+            <span>30+</span>
+          </div>
         </div>
-      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="text-center">
-          <div className="text-3xl font-bold text-gray-900 mb-1">{gamesAnalyzed}</div>
-          <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Games Analyzed</div>
-        </div>
-        <div className="text-center">
-          <div className="text-3xl font-bold text-gray-900 mb-1">{ratingsCount}</div>
-          <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">Games Rated</div>
-        </div>
-      </div>
+        {/* Positive/Negative Breakdown */}
+        {ratingsCount > 0 && !loading && (
+          <div className="mb-6 p-4 bg-terminal-dark rounded-lg border border-terminal-border">
+            <div className="flex items-center justify-between mb-3 text-sm font-mono">
+              <span className="text-neon-green flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                </svg>
+                {breakdown.positive} POSITIVE
+              </span>
+              <span className="text-neon-magenta flex items-center gap-2">
+                {breakdown.negative} NEGATIVE
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+                </svg>
+              </span>
+            </div>
+            <div className="h-3 progress-bar-retro rounded overflow-hidden flex">
+              {breakdown.positive > 0 && (
+                <div
+                  className="h-full progress-fill-green transition-all duration-500"
+                  style={{ width: `${positivePercentage}%` }}
+                />
+              )}
+              {breakdown.negative > 0 && (
+                <div
+                  className="h-full progress-fill-magenta transition-all duration-500"
+                  style={{ width: `${negativePercentage}%` }}
+                />
+              )}
+            </div>
+          </div>
+        )}
 
-      {/* Call to Action */}
-      {ratingsCount < 20 && (
-        <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
-          <p className="text-sm text-blue-900">
-            {ratingsCount === 0
-              ? "Rate recommendations to help us learn your preferences and improve future suggestions"
-              : "Keep rating games — your feedback helps us understand your taste better"
-            }
-          </p>
-        </div>
-      )}
+        {/* Empty state */}
+        {ratingsCount === 0 && (
+          <div className="mb-6 p-4 bg-terminal-dark rounded-lg border border-terminal-border border-dashed">
+            <p className="text-sm text-gray-500 font-mono text-center">
+              <span className="text-neon-yellow">[!]</span> No feedback data collected
+            </p>
+          </div>
+        )}
 
-      {/* View History Link */}
-      {ratingsCount > 0 && userId && (
-        <div className="mt-6 pt-6 border-t border-gray-100">
-          <a
-            href={`/profile/history?userId=${userId}`}
-            className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-2 group"
-          >
-            <span>View Rating History</span>
-            <svg
-              className="w-4 h-4 transform group-hover:translate-x-1 transition-transform"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-terminal-dark border border-terminal-border rounded-lg p-4 text-center">
+            <div className="orbitron text-2xl font-bold text-neon-cyan mb-1">{gamesAnalyzed}</div>
+            <div className="text-xs text-gray-500 uppercase tracking-wider font-mono">GAMES_ANALYZED</div>
+          </div>
+          <div className="bg-terminal-dark border border-terminal-border rounded-lg p-4 text-center">
+            <div className="orbitron text-2xl font-bold text-neon-magenta mb-1">{ratingsCount}</div>
+            <div className="text-xs text-gray-500 uppercase tracking-wider font-mono">GAMES_RATED</div>
+          </div>
+        </div>
+
+        {/* Call to Action */}
+        {ratingsCount < 20 && (
+          <div className="p-4 bg-neon-cyan/5 border border-neon-cyan/20 rounded-lg">
+            <p className="text-sm text-neon-cyan font-mono">
+              <span className="text-gray-500">&gt;</span>{' '}
+              {ratingsCount === 0
+                ? "Rate recommendations to train the neural network"
+                : "Continue rating to improve prediction accuracy"
+              }
+            </p>
+          </div>
+        )}
+
+        {/* View History Link */}
+        {ratingsCount > 0 && userId && (
+          <div className="pt-6 border-t border-terminal-border mt-6">
+            <a
+              href={`/profile/history?userId=${userId}`}
+              className="text-sm font-mono text-neon-cyan hover:text-neon-magenta flex items-center gap-2 group transition-colors"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </a>
-        </div>
-      )}
+              <span>&gt; VIEW_RATING_HISTORY</span>
+              <svg
+                className="w-4 h-4 transform group-hover:translate-x-1 transition-transform"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

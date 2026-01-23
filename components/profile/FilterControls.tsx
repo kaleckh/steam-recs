@@ -27,7 +27,6 @@ export default function FilterControls({
     }
   );
 
-  // Sync with parent's current filters
   useEffect(() => {
     if (currentFilters) {
       setFilters(currentFilters);
@@ -36,7 +35,7 @@ export default function FilterControls({
 
   const handleFilterChange = (
     key: keyof RecommendationFilters,
-    value: any
+    value: unknown
   ) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
@@ -47,15 +46,15 @@ export default function FilterControls({
 
   return (
     <div className="w-full max-w-7xl mx-auto mb-8">
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      <div className="terminal-box rounded-lg overflow-hidden">
         {/* Header */}
         <button
           onClick={() => onToggleExpanded(!isExpanded)}
-          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          className="w-full terminal-header justify-between hover:bg-terminal-light/50 transition-colors cursor-pointer"
         >
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-3 ml-16">
             <svg
-              className="w-6 h-6 text-blue-600"
+              className="w-5 h-5 text-neon-cyan"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -67,12 +66,12 @@ export default function FilterControls({
                 d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
               />
             </svg>
-            <h3 className="text-lg font-semibold text-gray-900">
-              Filter Recommendations
-            </h3>
+            <span className="orbitron text-sm font-semibold text-gray-300 uppercase tracking-wider">
+              FILTER_PARAMS.config
+            </span>
           </div>
           <svg
-            className={`w-5 h-5 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            className={`w-5 h-5 text-neon-cyan transition-transform duration-300 mr-4 ${isExpanded ? 'rotate-180' : ''}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -88,11 +87,12 @@ export default function FilterControls({
 
         {/* Filter Controls */}
         {isExpanded && (
-          <div className="px-6 py-6 border-t border-gray-200 space-y-6">
+          <div className="p-6 space-y-6 border-t border-terminal-border animate-slide-up">
             {/* Results Limit */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Number of Results: {filters.limit}
+              <label className="block text-sm font-mono text-gray-400 mb-3">
+                <span className="text-neon-green">&gt;</span> RESULT_COUNT:{' '}
+                <span className="text-neon-cyan">{filters.limit}</span>
               </label>
               <input
                 type="range"
@@ -104,24 +104,32 @@ export default function FilterControls({
                   handleFilterChange('limit', parseInt(e.target.value))
                 }
                 disabled={isLoading}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                className="slider-retro w-full"
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <div className="flex justify-between text-xs text-gray-600 mt-2 font-mono">
                 <span>5</span>
                 <span>50</span>
                 <span>100</span>
               </div>
             </div>
 
-            {/* Popularity Slider (Hidden Gems vs Popular) */}
+            {/* Popularity Slider */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Game Popularity:{' '}
-                {filters.popularityScore === undefined || filters.popularityScore === 50
-                  ? 'Balanced'
-                  : filters.popularityScore < 50
-                    ? `Hidden Gems (${filters.popularityScore})`
-                    : `Popular (${filters.popularityScore})`}
+              <label className="block text-sm font-mono text-gray-400 mb-3">
+                <span className="text-neon-green">&gt;</span> POPULARITY_MODE:{' '}
+                <span className={
+                  filters.popularityScore === undefined || filters.popularityScore === 50
+                    ? 'text-gray-400'
+                    : filters.popularityScore < 50
+                      ? 'text-neon-magenta'
+                      : 'text-neon-green'
+                }>
+                  {filters.popularityScore === undefined || filters.popularityScore === 50
+                    ? 'BALANCED'
+                    : filters.popularityScore < 50
+                      ? `HIDDEN_GEMS (${filters.popularityScore})`
+                      : `POPULAR (${filters.popularityScore})`}
+                </span>
               </label>
               <input
                 type="range"
@@ -133,26 +141,20 @@ export default function FilterControls({
                   handleFilterChange('popularityScore', parseInt(e.target.value))
                 }
                 disabled={isLoading}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                className="slider-retro w-full"
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>Hidden Gems</span>
+              <div className="flex justify-between text-xs text-gray-600 mt-2 font-mono">
+                <span className="text-neon-magenta">Hidden Gems</span>
                 <span>Balanced</span>
-                <span>Popular</span>
+                <span className="text-neon-green">Popular</span>
               </div>
-              <p className="text-xs text-gray-600 mt-2">
-                {filters.popularityScore === undefined || filters.popularityScore === 50
-                  ? 'Mix of well-known and undiscovered games'
-                  : filters.popularityScore < 50
-                    ? 'Discover underrated games with fewer reviews but high quality'
-                    : 'Show popular games that everyone knows and loves'}
-              </p>
             </div>
 
             {/* Minimum Review Score */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Minimum Review Score: {filters.minReviewScore}%
+              <label className="block text-sm font-mono text-gray-400 mb-3">
+                <span className="text-neon-green">&gt;</span> MIN_REVIEW_SCORE:{' '}
+                <span className="text-neon-cyan">{filters.minReviewScore}%</span>
               </label>
               <input
                 type="range"
@@ -164,10 +166,10 @@ export default function FilterControls({
                   handleFilterChange('minReviewScore', parseInt(e.target.value))
                 }
                 disabled={isLoading}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                className="slider-retro w-full"
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>Any</span>
+              <div className="flex justify-between text-xs text-gray-600 mt-2 font-mono">
+                <span>ANY</span>
                 <span>50%</span>
                 <span>100%</span>
               </div>
@@ -176,14 +178,14 @@ export default function FilterControls({
             {/* Release Year Range */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Release Year (Min)
+                <label className="block text-sm font-mono text-gray-400 mb-3">
+                  <span className="text-neon-green">&gt;</span> YEAR_MIN
                 </label>
                 <input
                   type="number"
                   min="1990"
                   max={new Date().getFullYear()}
-                  placeholder="Any"
+                  placeholder="ANY"
                   value={filters.releaseYearMin || ''}
                   onChange={(e) =>
                     handleFilterChange(
@@ -192,18 +194,18 @@ export default function FilterControls({
                     )
                   }
                   disabled={isLoading}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="input-terminal w-full rounded-lg"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Release Year (Max)
+                <label className="block text-sm font-mono text-gray-400 mb-3">
+                  <span className="text-neon-green">&gt;</span> YEAR_MAX
                 </label>
                 <input
                   type="number"
                   min="1990"
                   max={new Date().getFullYear()}
-                  placeholder="Any"
+                  placeholder="ANY"
                   value={filters.releaseYearMax || ''}
                   onChange={(e) =>
                     handleFilterChange(
@@ -212,14 +214,27 @@ export default function FilterControls({
                     )
                   }
                   disabled={isLoading}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="input-terminal w-full rounded-lg"
                 />
               </div>
             </div>
 
             {/* Toggle Filters */}
             <div className="space-y-3">
-              <label className="flex items-center space-x-3 cursor-pointer">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className={`
+                  w-6 h-6 rounded border-2 flex items-center justify-center transition-all
+                  ${filters.excludeOwned
+                    ? 'bg-neon-cyan/20 border-neon-cyan'
+                    : 'border-terminal-border group-hover:border-gray-500'
+                  }
+                `}>
+                  {filters.excludeOwned && (
+                    <svg className="w-4 h-4 text-neon-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
                 <input
                   type="checkbox"
                   checked={filters.excludeOwned}
@@ -227,14 +242,27 @@ export default function FilterControls({
                     handleFilterChange('excludeOwned', e.target.checked)
                   }
                   disabled={isLoading}
-                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                  className="sr-only"
                 />
-                <span className="text-sm font-medium text-gray-700">
-                  Exclude games I already own
+                <span className="text-sm font-mono text-gray-400 group-hover:text-gray-300 transition-colors">
+                  EXCLUDE_OWNED_GAMES
                 </span>
               </label>
 
-              <label className="flex items-center space-x-3 cursor-pointer">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className={`
+                  w-6 h-6 rounded border-2 flex items-center justify-center transition-all
+                  ${filters.isFree === true
+                    ? 'bg-neon-green/20 border-neon-green'
+                    : 'border-terminal-border group-hover:border-gray-500'
+                  }
+                `}>
+                  {filters.isFree === true && (
+                    <svg className="w-4 h-4 text-neon-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
                 <input
                   type="checkbox"
                   checked={filters.isFree === true}
@@ -245,47 +273,33 @@ export default function FilterControls({
                     )
                   }
                   disabled={isLoading}
-                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                  className="sr-only"
                 />
-                <span className="text-sm font-medium text-gray-700">
-                  Only free-to-play games
+                <span className="text-sm font-mono text-gray-400 group-hover:text-gray-300 transition-colors">
+                  FREE_TO_PLAY_ONLY
                 </span>
               </label>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-3">
+            <div className="flex gap-4 pt-4 border-t border-terminal-border">
               <button
                 onClick={handleApplyFilters}
                 disabled={isLoading}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md flex items-center justify-center gap-2"
+                className="flex-1 btn-arcade rounded-lg py-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
-                  <>
-                    <svg
-                      className="animate-spin h-5 w-5 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Applying...
-                  </>
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-neon-cyan/20 border-t-neon-cyan rounded-full animate-spin" />
+                    APPLYING...
+                  </span>
                 ) : (
-                  'Apply Filters'
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    EXECUTE
+                  </span>
                 )}
               </button>
               <button
@@ -294,15 +308,20 @@ export default function FilterControls({
                     limit: 20,
                     excludeOwned: true,
                     minReviewScore: 0,
-                    popularityScore: 50, // Reset to balanced
+                    popularityScore: 50,
                   };
                   setFilters(defaultFilters);
                   onFilterChange(defaultFilters);
                 }}
                 disabled={isLoading}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 btn-arcade btn-arcade-magenta rounded-lg py-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Reset
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  RESET
+                </span>
               </button>
             </div>
           </div>

@@ -7,57 +7,96 @@ interface ErrorDisplayProps {
 
 export default function ErrorDisplay({ error, onRetry }: ErrorDisplayProps) {
   return (
-    <div className="w-full max-w-2xl mx-auto py-12">
-      <div className="bg-red-50 border-2 border-red-200 rounded-2xl shadow-lg p-8">
-        <div className="flex flex-col items-center space-y-6 text-center">
-          {/* Error Icon */}
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
-            <svg
-              className="w-10 h-10 text-red-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+    <div className="w-full max-w-2xl mx-auto py-12 animate-slide-up">
+      <div className="terminal-box rounded-lg overflow-hidden">
+        {/* Terminal Header - Error Style */}
+        <div className="bg-gradient-to-r from-red-900/50 to-terminal-mid border-b border-red-500/30 px-4 py-3 flex items-center gap-3">
+          <div className="flex gap-2">
+            <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+            <div className="w-3 h-3 rounded-full bg-neon-yellow" />
+            <div className="w-3 h-3 rounded-full bg-gray-600" />
+          </div>
+          <span className="text-red-400 text-sm font-mono ml-4">FATAL_ERROR.log</span>
+        </div>
+
+        {/* Error Body */}
+        <div className="p-8">
+          {/* Glitch Icon */}
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-lg bg-red-500/10 border-2 border-red-500/30 flex items-center justify-center glitch-hover">
+                <svg className="w-10 h-10 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              {/* Glitch overlay effect */}
+              <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity">
+                <div className="absolute inset-0 bg-red-500/20 translate-x-0.5 translate-y-0.5" />
+                <div className="absolute inset-0 bg-cyan-500/20 -translate-x-0.5 -translate-y-0.5" />
+              </div>
+            </div>
           </div>
 
           {/* Error Message */}
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-gray-900">
-              Oops! Something went wrong
+          <div className="text-center mb-8">
+            <h2 className="orbitron text-2xl font-bold text-red-400 mb-4 glow-magenta">
+              SYSTEM FAILURE
             </h2>
-            <p className="text-lg text-red-800">{error}</p>
+            <div className="bg-terminal-dark rounded-lg p-4 border border-red-500/20">
+              <p className="text-red-300 font-mono text-sm">
+                <span className="text-gray-500">&gt;</span> ERROR: {error}
+              </p>
+            </div>
           </div>
 
           {/* Retry Button */}
           {onRetry && (
             <button
               onClick={onRetry}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-300"
+              className="w-full btn-arcade btn-arcade-magenta rounded-lg py-4 text-lg mb-8"
             >
-              Try Again
+              <span className="flex items-center justify-center gap-3">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                RETRY_OPERATION
+              </span>
             </button>
           )}
 
-          {/* Help Text */}
-          <div className="bg-white border border-red-200 rounded-lg p-4 w-full">
-            <h3 className="text-sm font-semibold text-gray-900 mb-2">
-              Common Issues:
+          {/* Troubleshooting */}
+          <div className="bg-terminal-dark rounded-lg p-6 border border-terminal-border">
+            <h3 className="text-sm font-mono text-neon-yellow mb-4 uppercase tracking-wider flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              TROUBLESHOOTING_GUIDE
             </h3>
-            <ul className="text-sm text-gray-700 space-y-1 text-left">
-              <li>• Make sure your Steam profile is set to Public</li>
-              <li>• Check that your Steam ID or URL is correct</li>
-              <li>
-                • Your Steam ID should be 17 digits (e.g., 76561198012345678)
+            <ul className="space-y-2 font-mono text-sm">
+              <li className="flex items-start gap-3 text-gray-400">
+                <span className="text-neon-cyan">[1]</span>
+                <span>Verify Steam profile is set to PUBLIC</span>
               </li>
-              <li>• Profile URLs should include steamcommunity.com</li>
+              <li className="flex items-start gap-3 text-gray-400">
+                <span className="text-neon-cyan">[2]</span>
+                <span>Check Steam ID format: 17 digits (76561198012345678)</span>
+              </li>
+              <li className="flex items-start gap-3 text-gray-400">
+                <span className="text-neon-cyan">[3]</span>
+                <span>Profile URL must include steamcommunity.com</span>
+              </li>
+              <li className="flex items-start gap-3 text-gray-400">
+                <span className="text-neon-cyan">[4]</span>
+                <span>Game details visibility must be enabled</span>
+              </li>
             </ul>
+          </div>
+
+          {/* Stack trace style decoration */}
+          <div className="mt-6 text-[10px] text-gray-700 font-mono overflow-hidden">
+            <p>at ProfileAnalyzer.connect (steam-api.ts:42)</p>
+            <p>at async IngestService.process (ingest.ts:127)</p>
+            <p>at async UserController.analyze (user.ts:89)</p>
           </div>
         </div>
       </div>

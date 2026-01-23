@@ -9,17 +9,14 @@ interface Point {
   baseY: number;
   vx: number;
   vy: number;
-  radius: number;
   opacity: number;
   phase: number;
-  swaySpeed: number;
-  swayAmount: number;
 }
 
 export default function AnimatedBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pointsRef = useRef<Point[]>([]);
-  const mouseRef = useRef({ x: 0, y: 0 });
+  const mouseRef = useRef({ x: -1000, y: -1000 });
   const animationRef = useRef<number>();
 
   useEffect(() => {
@@ -29,19 +26,17 @@ export default function AnimatedBackground() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Set canvas size
     const resizeCanvas = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       initPoints();
     };
 
-    // Initialize points in a grid
     const initPoints = () => {
       const points: Point[] = [];
-      const spacing = 40;
-      const cols = Math.ceil(canvas.width / spacing);
-      const rows = Math.ceil(canvas.height / spacing);
+      const spacing = 50;
+      const cols = Math.ceil(canvas.width / spacing) + 1;
+      const rows = Math.ceil(canvas.height / spacing) + 1;
 
       for (let i = 0; i < cols; i++) {
         for (let j = 0; j < rows; j++) {
@@ -54,73 +49,126 @@ export default function AnimatedBackground() {
             baseY: y,
             vx: 0,
             vy: 0,
-            radius: 1.2,
-            opacity: 0.5 + Math.random() * 0.5,
+            opacity: 0.15 + Math.random() * 0.25,
             phase: Math.random() * Math.PI * 2,
-            swaySpeed: 0.0005 + Math.random() * 0.001,
-            swayAmount: 10 + Math.random() * 20,
           });
         }
       }
       pointsRef.current = points;
     };
 
-    // Mouse move handler
     const handleMouseMove = (e: MouseEvent) => {
       mouseRef.current = { x: e.clientX, y: e.clientY };
     };
 
-    // Animation loop
+    const handleMouseLeave = () => {
+      mouseRef.current = { x: -1000, y: -1000 };
+    };
+
     let startTime = Date.now();
     const animate = () => {
       const currentTime = Date.now();
       const elapsed = currentTime - startTime;
 
-      ctx.fillStyle = '#1b2838';
+      // Dark background
+      ctx.fillStyle = '#0a0a0f';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const points = pointsRef.current;
       const mouse = mouseRef.current;
 
-      points.forEach((point, index) => {
-        // Expansion/contraction cycle (4 second cycle)
-        const cycleTime = (elapsed + index * 50) % 4000;
-        const expansionPhase = Math.sin((cycleTime / 4000) * Math.PI * 2);
-        const expansionAmount = expansionPhase * 15;
+      // Draw grid lines first (very subtle)
+      ctx.strokeStyle = 'rgba(0, 255, 245, 0.03)';
+      ctx.lineWidth = 1;
 
-        // Sway motion
-        const swayX = Math.sin(elapsed * point.swaySpeed + point.phase) * point.swayAmount;
-        const swayY = Math.cos(elapsed * point.swaySpeed * 0.8 + point.phase) * point.swayAmount;
+      // Vertical lines
+      for (let i = 0; i < Math.ceil(canvas.width / 50) + 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * 50, 0);
+        ctx.lineTo(i * 50, canvas.height);
+        ctx.stroke();
+      }
 
-        // Mouse repulsion
+      // Horizontal lines
+      for (let j = 0; j < Math.ceil(canvas.height / 50) + 1; j++) {
+        ctx.beginPath();
+        ctx.moveTo(0, j * 50);
+        ctx.lineTo(canvas.width, j * 50);
+        ctx.stroke();
+      }
+
+      // Draw and update points
+      points.forEach((point) => {
+        // Gentle breathing animation
+        const breathe = Math.sin(elapsed * 0.001 + point.phase) * 5;
+
+        // Mouse interaction
         const dx = point.baseX - mouse.x;
         const dy = point.baseY - mouse.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        const maxDistance = 120;
+        const maxDistance = 150;
 
         let repelX = 0;
         let repelY = 0;
+        let glowIntensity = 0;
+
         if (distance < maxDistance && distance > 0) {
-          const force = ((maxDistance - distance) / maxDistance) * 50;
+          const force = ((maxDistance - distance) / maxDistance) * 30;
           repelX = (dx / distance) * force;
           repelY = (dy / distance) * force;
+          glowIntensity = (maxDistance - distance) / maxDistance;
         }
 
-        // Apply elastic damping to velocity
-        point.vx += repelX * 0.1;
-        point.vy += repelY * 0.1;
-        point.vx *= 0.85;
-        point.vy *= 0.85;
+        // Elastic return
+        point.vx += repelX * 0.05;
+        point.vy += repelY * 0.05;
+        point.vx *= 0.9;
+        point.vy *= 0.9;
 
         // Update position
-        point.x = point.baseX + swayX + expansionAmount + point.vx;
-        point.y = point.baseY + swayY + expansionAmount + point.vy;
+        point.x = point.baseX + breathe + point.vx;
+        point.y = point.baseY + breathe + point.vy;
 
-        // Draw point
-        ctx.fillStyle = `rgba(103, 193, 245, ${point.opacity * (0.5 + Math.abs(expansionPhase) * 0.5)})`;
+        // Draw point with glow
+        const baseOpacity = point.opacity;
+        const finalOpacity = Math.min(baseOpacity + glowIntensity * 0.5, 1);
+
+        // Glow effect for nearby points
+        if (glowIntensity > 0) {
+          const gradient = ctx.createRadialGradient(
+            point.x, point.y, 0,
+            point.x, point.y, 15
+          );
+          gradient.addColorStop(0, `rgba(0, 255, 245, ${glowIntensity * 0.3})`);
+          gradient.addColorStop(1, 'rgba(0, 255, 245, 0)');
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, 15, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Draw the point
+        ctx.fillStyle = `rgba(0, 255, 245, ${finalOpacity})`;
         ctx.beginPath();
-        ctx.arc(point.x, point.y, point.radius, 0, Math.PI * 2);
+        ctx.arc(point.x, point.y, 2, 0, Math.PI * 2);
         ctx.fill();
+
+        // Draw connections to nearby points
+        points.forEach((other) => {
+          if (other === point) return;
+          const connDx = other.x - point.x;
+          const connDy = other.y - point.y;
+          const connDist = Math.sqrt(connDx * connDx + connDy * connDy);
+
+          if (connDist < 70) {
+            const connOpacity = (1 - connDist / 70) * 0.15;
+            ctx.strokeStyle = `rgba(0, 255, 245, ${connOpacity})`;
+            ctx.beginPath();
+            ctx.moveTo(point.x, point.y);
+            ctx.lineTo(other.x, other.y);
+            ctx.stroke();
+          }
+        });
       });
 
       animationRef.current = requestAnimationFrame(animate);
@@ -129,11 +177,13 @@ export default function AnimatedBackground() {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseleave', handleMouseLeave);
     animate();
 
     return () => {
       window.removeEventListener('resize', resizeCanvas);
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseleave', handleMouseLeave);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
@@ -141,8 +191,12 @@ export default function AnimatedBackground() {
   }, []);
 
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden bg-[#1b2838]">
+    <div className="fixed inset-0 -z-10 overflow-hidden bg-[#0a0a0f]">
       <canvas ref={canvasRef} className="absolute inset-0" />
+      {/* Radial gradient overlay for depth */}
+      <div className="absolute inset-0 bg-radial-gradient pointer-events-none" style={{
+        background: 'radial-gradient(ellipse at 50% 0%, rgba(0, 255, 245, 0.05) 0%, transparent 50%)'
+      }} />
     </div>
   );
 }
