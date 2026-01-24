@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import {
   ingestUserProfile,
   getRecommendations,
@@ -12,10 +12,11 @@ import {
 import SteamInput from '@/components/profile/SteamInput';
 import LoadingState from '@/components/profile/LoadingState';
 import ErrorDisplay from '@/components/profile/ErrorDisplay';
-import RecommendationsList from '@/components/profile/RecommendationsList';
-import FilterControls from '@/components/profile/FilterControls';
-import AIAssistantBox from '@/components/profile/AIAssistantBox';
-import AlgorithmAccuracy from '@/components/profile/AlgorithmAccuracy';
+import { ProfileTab } from '@/components/navigation/TopNav';
+import ForYouTab from '@/components/profile/tabs/ForYouTab';
+import AISearchTab from '@/components/profile/tabs/AISearchTab';
+import AnalyticsTab from '@/components/profile/tabs/AnalyticsTab';
+import LibraryTab from '@/components/profile/tabs/LibraryTab';
 
 // LocalStorage keys
 const STORAGE_KEYS = {
@@ -45,7 +46,6 @@ type ProfileState =
   | { stage: 'error'; error: string };
 
 export default function ProfilePage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [state, setState] = useState<ProfileState>({ stage: 'input' });
   const [filters, setFilters] = useState<RecommendationFilters>({
@@ -65,6 +65,12 @@ export default function ProfilePage() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  // Get active tab from URL params
+  const tabParam = searchParams.get('tab');
+  const activeTab: ProfileTab = (tabParam === 'ai-search' || tabParam === 'analytics' || tabParam === 'library')
+    ? tabParam
+    : 'for-you';
 
   // Check for existing session on mount
   useEffect(() => {
@@ -256,7 +262,6 @@ export default function ProfilePage() {
     }
 
     setIsApplyingFilters(false);
-    setIsFilterExpanded(false);
   };
 
   const handleUpdateProfile = () => {
@@ -269,10 +274,6 @@ export default function ProfilePage() {
     setState({ stage: 'input' });
   };
 
-  const handleChatQuery = (query: string) => {
-    router.push(`/search?q=${encodeURIComponent(query)}`);
-  };
-
   return (
     <div className="min-h-screen bg-[#0a0a0f] py-12 px-4 sm:px-6 lg:px-8 pb-32 grid-pattern relative">
       {/* CRT Effects */}
@@ -281,7 +282,7 @@ export default function ProfilePage() {
 
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Header */}
-        <div className="text-center mb-16 animate-slide-up">
+        <div className="text-center mb-12 animate-slide-up">
           <div className="inline-block mb-4">
             <span className="pixel-font text-xs text-neon-orange tracking-widest uppercase">
               // SYSTEM ONLINE
@@ -320,39 +321,41 @@ export default function ProfilePage() {
 
         {!isInitializing && state.stage === 'loading_recommendations' && (
           <div className="space-y-8">
-            {/* Profile Skeleton */}
-            <div className="flex justify-center">
-              <div className="terminal-box rounded-lg w-full max-w-6xl overflow-hidden">
-                <div className="terminal-header">
-                  <span className="text-gray-400 text-sm font-mono ml-16">USER_PROFILE.exe</span>
-                </div>
-                <div className="p-8">
-                  <div className="flex items-start justify-between mb-8">
-                    <div className="flex items-center gap-6">
-                      <div className="w-20 h-20 bg-terminal-light animate-pulse rounded-lg border-2 border-terminal-border" />
-                      <div className="space-y-3">
-                        <div className="h-7 w-40 bg-terminal-light rounded animate-pulse" />
-                        <div className="h-4 w-56 bg-terminal-light rounded animate-pulse" />
-                        <div className="h-3 w-32 bg-terminal-light rounded animate-pulse" />
-                      </div>
-                    </div>
-                    <div className="h-12 w-44 bg-terminal-light rounded animate-pulse" />
+            {/* Profile Skeleton - hidden on AI Search tab */}
+            {activeTab !== 'ai-search' && (
+              <div className="flex justify-center">
+                <div className="terminal-box rounded-lg w-full max-w-6xl overflow-hidden">
+                  <div className="terminal-header">
+                    <span className="text-gray-400 text-sm font-mono ml-16">USER_PROFILE.exe</span>
                   </div>
-
-                  <div className="border-t border-terminal-border pt-6">
-                    <div className="h-4 w-48 bg-terminal-light rounded mb-4 animate-pulse" />
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <div key={i} className="space-y-2">
-                          <div className="aspect-[460/215] bg-terminal-light rounded animate-pulse" />
-                          <div className="h-3 bg-terminal-light rounded animate-pulse" />
+                  <div className="p-8">
+                    <div className="flex items-start justify-between mb-8">
+                      <div className="flex items-center gap-6">
+                        <div className="w-20 h-20 bg-terminal-light animate-pulse rounded-lg border-2 border-terminal-border" />
+                        <div className="space-y-3">
+                          <div className="h-7 w-40 bg-terminal-light rounded animate-pulse" />
+                          <div className="h-4 w-56 bg-terminal-light rounded animate-pulse" />
+                          <div className="h-3 w-32 bg-terminal-light rounded animate-pulse" />
                         </div>
-                      ))}
+                      </div>
+                      <div className="h-12 w-44 bg-terminal-light rounded animate-pulse" />
+                    </div>
+
+                    <div className="border-t border-terminal-border pt-6">
+                      <div className="h-4 w-48 bg-terminal-light rounded mb-4 animate-pulse" />
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <div key={i} className="space-y-2">
+                            <div className="aspect-[460/215] bg-terminal-light rounded animate-pulse" />
+                            <div className="h-3 bg-terminal-light rounded animate-pulse" />
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Loading Spinner */}
             <div className="flex justify-center py-12">
@@ -373,7 +376,8 @@ export default function ProfilePage() {
 
         {!isInitializing && state.stage === 'recommendations' && (
           <div className="space-y-8 stagger-children">
-            {/* User Profile Card */}
+            {/* User Profile Card - hidden on AI Search tab */}
+            {activeTab !== 'ai-search' && (
             <div className="flex justify-center">
               <div className="terminal-box rounded-lg w-full max-w-6xl overflow-hidden">
                 <div className="terminal-header">
@@ -477,55 +481,39 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-
-            {/* AI Assistant Box */}
-            <AIAssistantBox
-              onSubmit={handleChatQuery}
-              isLoading={false}
-            />
-
-            {/* Filters */}
-            <FilterControls
-              onFilterChange={handleFilterChange}
-              isLoading={isApplyingFilters}
-              currentFilters={filters}
-            />
-
-            {/* Loading Spinner for Filter Changes */}
-            {isApplyingFilters && (
-              <div className="flex justify-center py-12">
-                <div className="terminal-box rounded-lg p-8 flex flex-col items-center space-y-4">
-                  <div className="relative w-16 h-16">
-                    <div className="absolute inset-0 border-4 border-neon-orange/20 rounded-full" />
-                    <div className="absolute inset-0 border-4 border-transparent border-t-neon-orange rounded-full animate-spin" />
-                  </div>
-                  <p className="text-neon-orange font-mono">APPLYING FILTERS...</p>
-                </div>
-              </div>
             )}
 
-            {/* Recommendations */}
-            {!isApplyingFilters && (
-              <RecommendationsList
-                recommendations={state.recommendations}
+            {/* Tab Content */}
+            {activeTab === 'for-you' && (
+              <ForYouTab
                 userId={state.userId}
+                recommendations={state.recommendations}
+                gamesAnalyzed={state.gamesAnalyzed}
+                ratingsCount={ratingsCount}
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                isApplyingFilters={isApplyingFilters}
               />
             )}
 
-            {/* Algorithm Accuracy - at bottom for improving recommendations */}
-            <div className="flex justify-center">
-              <div className="w-full max-w-6xl">
-                <AlgorithmAccuracy
-                  ratingsCount={ratingsCount}
-                  gamesAnalyzed={state.gamesAnalyzed}
-                  userId={state.userId}
-                />
-              </div>
-            </div>
+            {activeTab === 'ai-search' && (
+              <AISearchTab userId={state.userId} />
+            )}
+
+            {activeTab === 'analytics' && (
+              <AnalyticsTab
+                userId={state.userId}
+                gamesAnalyzed={state.gamesAnalyzed}
+                totalPlaytimeHours={state.totalPlaytimeHours}
+              />
+            )}
+
+            {activeTab === 'library' && (
+              <LibraryTab userId={state.userId} />
+            )}
           </div>
         )}
       </div>
-
     </div>
   );
 }

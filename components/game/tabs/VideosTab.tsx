@@ -21,31 +21,14 @@ export default function VideosTab({ game }: VideosTabProps) {
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch YouTube videos for this game
     async function fetchYouTubeVideos() {
-      // Skip if no API key configured
-      if (!process.env.NEXT_PUBLIC_YOUTUBE_API_KEY) {
-        console.log('YouTube API key not configured - showing Steam trailers only');
-        setIsLoading(false);
-        return;
-      }
-
       try {
-        const query = encodeURIComponent(`${game.name} gameplay`);
-        const response = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&type=video&maxResults=12&key=${process.env.NEXT_PUBLIC_YOUTUBE_API_KEY}`
-        );
+        const query = `${game.name} gameplay`;
+        const response = await fetch(`/api/youtube?q=${encodeURIComponent(query)}`);
+        const data = await response.json();
 
-        if (response.ok) {
-          const data = await response.json();
-          const videos: YouTubeVideo[] = data.items.map((item: any) => ({
-            id: item.id.videoId,
-            title: item.snippet.title,
-            thumbnail: item.snippet.thumbnails.medium.url,
-            channelTitle: item.snippet.channelTitle,
-            publishedAt: item.snippet.publishedAt,
-          }));
-          setYoutubeVideos(videos);
+        if (data.success && data.videos) {
+          setYoutubeVideos(data.videos);
         }
       } catch (error) {
         console.error('Failed to fetch YouTube videos:', error);
@@ -63,7 +46,13 @@ export default function VideosTab({ game }: VideosTabProps) {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative w-12 h-12">
+            <div className="absolute inset-0 border-4 border-neon-cyan/20 rounded-full" />
+            <div className="absolute inset-0 border-4 border-transparent border-t-neon-cyan rounded-full animate-spin" />
+          </div>
+          <p className="text-neon-cyan font-mono text-sm">LOADING VIDEOS...</p>
+        </div>
       </div>
     );
   }
@@ -92,7 +81,9 @@ export default function VideosTab({ game }: VideosTabProps) {
       {/* Steam Official Trailers */}
       {steamTrailers.length > 0 && (
         <div>
-          <h3 className="text-2xl font-bold text-white mb-4">Official Trailers</h3>
+          <h3 className="text-lg font-bold text-white mb-4 orbitron flex items-center gap-2">
+            <span className="text-neon-green">&gt;</span> OFFICIAL TRAILERS
+          </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {steamTrailers.map((trailer) => (
               <div
@@ -125,8 +116,11 @@ export default function VideosTab({ game }: VideosTabProps) {
       {/* YouTube Videos */}
       {youtubeVideos.length > 0 && (
         <div>
-          <h3 className="text-2xl font-bold text-white mb-4">
-            Community Videos & Gameplay
+          <h3 className="text-lg font-bold text-white mb-4 orbitron flex items-center gap-2">
+            <span className="text-neon-orange">&gt;</span> COMMUNITY VIDEOS
+            <span className="px-2 py-0.5 text-[10px] font-mono bg-red-500/20 text-red-400 border border-red-500/50 rounded">
+              YOUTUBE
+            </span>
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {youtubeVideos.map((video) => (
@@ -161,7 +155,7 @@ export default function VideosTab({ game }: VideosTabProps) {
 
       {steamTrailers.length === 0 && youtubeVideos.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-gray-400 text-lg">No videos available for this game.</p>
+          <p className="text-gray-500 font-mono">[INFO] No videos available for this game</p>
         </div>
       )}
     </div>

@@ -22,21 +22,26 @@ export default function GameTabs({ game }: GameTabsProps) {
   ];
 
   return (
-    <div className="bg-gray-800/50 rounded-xl shadow-xl border border-gray-700">
+    <div className="terminal-box rounded-lg overflow-hidden">
+      {/* Terminal Header */}
+      <div className="terminal-header">
+        <span className="text-gray-400 text-sm font-mono ml-16">MEDIA_EXPLORER.exe</span>
+      </div>
+
       {/* Tab Headers */}
-      <div className="border-b border-gray-700">
-        <div className="flex space-x-1 p-2">
+      <div className="border-b border-terminal-border">
+        <div className="flex gap-1 p-2">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all duration-200 ${
+              className={`flex-1 py-3 px-4 rounded-lg font-mono text-sm transition-all ${
                 activeTab === tab.id
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                  ? 'bg-neon-cyan/20 text-neon-cyan border border-neon-cyan'
+                  : 'text-gray-400 hover:text-white hover:bg-terminal-light border border-transparent'
               }`}
             >
-              {tab.label}
+              {tab.label.toUpperCase()}
               {tab.count !== undefined && ` (${tab.count})`}
             </button>
           ))}

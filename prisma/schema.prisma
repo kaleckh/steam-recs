@@ -45,6 +45,7 @@ model Game {
 model UserProfile {
   id                 String                   @id @default(cuid())
   steamId            String?                  @unique @map("steam_id") // Steam user ID (optional)
+  email              String?                  @unique // From Stripe checkout
 
   // Personalized recommendation vector (computed from played games)
   preferenceVector   Unsupported("vector(1536)")? @map("preference_vector")
@@ -55,6 +56,10 @@ model UserProfile {
   // Subscription tier
   subscriptionTier   String                   @default("free") @map("subscription_tier") // 'free' or 'premium'
   subscriptionExpiresAt DateTime?             @map("subscription_expires_at")
+
+  // Stripe integration
+  stripeCustomerId     String?                @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?                @unique @map("stripe_subscription_id")
 
   // Metadata about preference generation
   lastUpdated        DateTime?                @map("last_updated")
