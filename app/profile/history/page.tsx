@@ -125,12 +125,12 @@ export default function HistoryPage() {
 
   const GameCard = ({ game, feedbackType }: { game: FeedbackHistoryItem; feedbackType: string }) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow group">
-      <div className="relative h-48 overflow-hidden bg-gray-900">
+      <div className="relative aspect-video overflow-hidden bg-gray-900">
         {game.metadata?.headerImage ? (
           <img
             src={game.metadata.headerImage}
             alt={game.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-600">

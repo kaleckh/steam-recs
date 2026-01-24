@@ -108,10 +108,17 @@ export async function getRecommendations(
   filters?: RecommendationFilters
 ): Promise<RecommendationsResponse> {
   try {
+    // Extract top-level params and nest the rest under 'filters'
+    const { limit, excludeOwned, ...filterParams } = filters || {};
     const response = await fetch('/api/user/recommend', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, ...filters }),
+      body: JSON.stringify({
+        userId,
+        limit,
+        excludeOwned,
+        filters: filterParams,
+      }),
     });
 
     const data = await response.json();

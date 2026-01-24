@@ -269,7 +269,7 @@ async function ingestSingleGame(appId: number): Promise<{
         ${metadata.metacritic_score || null},
         ${metadata.type || null},
         ${JSON.stringify(metadata)}::jsonb,
-        ${Prisma.raw(`'${vectorString}'::vector(384)`)},
+        ${Prisma.raw(`'${vectorString}'::vector(1536)`)},
         NOW(),
         NOW()
       )

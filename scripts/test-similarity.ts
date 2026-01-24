@@ -23,11 +23,11 @@ async function testSimilarity() {
     SELECT
       app_id,
       name,
-      (embedding <=> ${vectorString}::vector(384)) as distance,
+      (embedding <=> ${vectorString}::vector(1536)) as distance,
       metadata->'tags' as tags
     FROM games
     WHERE embedding IS NOT NULL
-    ORDER BY embedding <=> ${vectorString}::vector(384) ASC
+    ORDER BY embedding <=> ${vectorString}::vector(1536) ASC
     LIMIT 5
   `;
 

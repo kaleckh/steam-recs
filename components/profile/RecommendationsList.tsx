@@ -6,15 +6,11 @@ import GameCard from './GameCard';
 
 interface RecommendationsListProps {
   recommendations: GameRecommendation[];
-  gamesAnalyzed: number;
-  totalPlaytimeHours?: number;
   userId?: string;
 }
 
 export default function RecommendationsList({
   recommendations: initialRecommendations,
-  gamesAnalyzed,
-  totalPlaytimeHours,
   userId,
 }: RecommendationsListProps) {
   const [recommendations, setRecommendations] = useState<GameRecommendation[]>(initialRecommendations);
@@ -122,53 +118,7 @@ export default function RecommendationsList({
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-8">
-      {/* Stats Banner */}
-      <div className="terminal-box rounded-lg overflow-hidden">
-        <div className="terminal-header">
-          <span className="text-gray-400 text-sm font-mono ml-16">RECOMMENDATIONS.output</span>
-        </div>
-        <div className="p-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div>
-              <h2 className="orbitron text-2xl font-bold text-white mb-2">
-                <span className="text-neon-cyan glow-cyan">PERSONALIZED</span> RESULTS
-              </h2>
-              <p className="text-gray-400 font-mono text-sm">
-                <span className="text-neon-green">&gt;</span> AI-curated based on your gaming profile
-              </p>
-            </div>
-            <div className="flex gap-4">
-              <div className="bg-terminal-dark border border-terminal-border rounded-lg px-6 py-3 text-center">
-                <div className="orbitron text-2xl font-bold text-neon-green">{gamesAnalyzed}</div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider">Analyzed</div>
-              </div>
-              {totalPlaytimeHours !== undefined && (
-                <div className="bg-terminal-dark border border-terminal-border rounded-lg px-6 py-3 text-center">
-                  <div className="orbitron text-2xl font-bold text-neon-magenta">
-                    {Math.round(totalPlaytimeHours).toLocaleString()}
-                  </div>
-                  <div className="text-xs text-gray-500 uppercase tracking-wider">Hours</div>
-                </div>
-              )}
-              <div className="bg-terminal-dark border border-terminal-border rounded-lg px-6 py-3 text-center">
-                <div className="orbitron text-2xl font-bold text-neon-cyan">{recommendations.length}</div>
-                <div className="text-xs text-gray-500 uppercase tracking-wider">Matches</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Info Card */}
-      <div className="terminal-box rounded-lg p-4 border-l-4 border-l-neon-cyan">
-        <p className="text-sm text-gray-400 font-mono">
-          <span className="text-neon-cyan">[INFO]</span> Our neural network analyzed your playtime patterns,
-          achievements, and preferences to find similar games using vector embeddings.
-          Higher review scores indicate community-verified quality.
-        </p>
-      </div>
-
+    <div className="w-full max-w-7xl mx-auto space-y-6">
       {/* Recommendations Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {recommendations.map((game, index) => (
@@ -207,7 +157,7 @@ export default function RecommendationsList({
         <div className="py-8 text-center">
           <div className="terminal-box rounded-lg p-6 inline-block">
             <p className="text-gray-500 font-mono text-sm">
-              <span className="text-neon-magenta">[END]</span> You've reached the end of recommendations.
+              <span className="text-neon-orange">[END]</span> You've reached the end of recommendations.
               <br />
               <span className="text-gray-600">Try adjusting filters for more results.</span>
             </p>

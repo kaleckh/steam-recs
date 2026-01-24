@@ -243,7 +243,7 @@ async function updateLearnedVector(
     await prisma.$executeRaw`
       UPDATE user_profiles
       SET
-        learned_vector = ${Prisma.raw(vectorString)}::vector(384),
+        learned_vector = ${Prisma.raw(vectorString)}::vector(1536),
         updated_at = NOW()
       WHERE id = ${userId}
     `;

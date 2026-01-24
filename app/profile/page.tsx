@@ -14,7 +14,7 @@ import LoadingState from '@/components/profile/LoadingState';
 import ErrorDisplay from '@/components/profile/ErrorDisplay';
 import RecommendationsList from '@/components/profile/RecommendationsList';
 import FilterControls from '@/components/profile/FilterControls';
-import ChatPrompt from '@/components/profile/ChatPrompt';
+import AIAssistantBox from '@/components/profile/AIAssistantBox';
 import AlgorithmAccuracy from '@/components/profile/AlgorithmAccuracy';
 
 // LocalStorage keys
@@ -54,7 +54,6 @@ export default function ProfilePage() {
     minReviewScore: 0,
     popularityScore: 50,
   });
-  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const [isApplyingFilters, setIsApplyingFilters] = useState(false);
   const [ratingsCount, setRatingsCount] = useState(0);
   const [topGames, setTopGames] = useState<Array<{
@@ -63,7 +62,6 @@ export default function ProfilePage() {
     playtimeHours: number;
     headerImage?: string;
   }>>([]);
-  const [showChatPrompt, setShowChatPrompt] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -96,20 +94,6 @@ export default function ProfilePage() {
 
     initializePage();
   }, [searchParams]);
-
-  // Scroll detection for chat prompt
-  useEffect(() => {
-    const handleScroll = () => {
-      if (state.stage === 'recommendations') {
-        setShowChatPrompt(window.scrollY > 400);
-      } else {
-        setShowChatPrompt(false);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [state.stage]);
 
   const loadSavedProfile = async (userId: string, steamId: string) => {
     setState({ stage: 'loading_recommendations', userId, steamId });
@@ -461,12 +445,12 @@ export default function ProfilePage() {
                             href={`/game/${game.appId}`}
                             className="group relative"
                           >
-                            <div className="aspect-[460/215] bg-terminal-dark rounded-lg overflow-hidden border border-terminal-border group-hover:border-neon-cyan transition-all">
+                            <div className="aspect-video bg-terminal-dark rounded-lg overflow-hidden border border-terminal-border group-hover:border-neon-cyan transition-all">
                               {game.headerImage ? (
                                 <img
                                   src={game.headerImage}
                                   alt={game.name}
-                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                  className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                                 />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-terminal-border">
@@ -494,23 +478,16 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Algorithm Accuracy */}
-            <div className="flex justify-center">
-              <div className="w-full max-w-6xl">
-                <AlgorithmAccuracy
-                  ratingsCount={ratingsCount}
-                  gamesAnalyzed={state.gamesAnalyzed}
-                  userId={state.userId}
-                />
-              </div>
-            </div>
+            {/* AI Assistant Box */}
+            <AIAssistantBox
+              onSubmit={handleChatQuery}
+              isLoading={false}
+            />
 
             {/* Filters */}
             <FilterControls
               onFilterChange={handleFilterChange}
               isLoading={isApplyingFilters}
-              isExpanded={isFilterExpanded}
-              onToggleExpanded={setIsFilterExpanded}
               currentFilters={filters}
             />
 
@@ -531,22 +508,24 @@ export default function ProfilePage() {
             {!isApplyingFilters && (
               <RecommendationsList
                 recommendations={state.recommendations}
-                gamesAnalyzed={state.gamesAnalyzed}
-                totalPlaytimeHours={state.totalPlaytimeHours}
                 userId={state.userId}
               />
             )}
+
+            {/* Algorithm Accuracy - at bottom for improving recommendations */}
+            <div className="flex justify-center">
+              <div className="w-full max-w-6xl">
+                <AlgorithmAccuracy
+                  ratingsCount={ratingsCount}
+                  gamesAnalyzed={state.gamesAnalyzed}
+                  userId={state.userId}
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Sticky Chat Prompt */}
-      {showChatPrompt && (
-        <ChatPrompt
-          onSubmit={handleChatQuery}
-          isLoading={false}
-        />
-      )}
     </div>
   );
 }

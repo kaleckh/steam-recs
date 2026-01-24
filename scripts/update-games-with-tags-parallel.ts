@@ -232,7 +232,7 @@ async function updateGame(game: GameToUpdate, dryRun: boolean): Promise<UpdateRe
       UPDATE games
       SET
         metadata = ${JSON.stringify(updatedMetadata)}::jsonb,
-        embedding = ${Prisma.raw(`'${vectorString}'::vector(384)`)},
+        embedding = ${Prisma.raw(`'${vectorString}'::vector(1536)`)},
         review_positive_pct = ${reviewScore || null},
         updated_at = NOW()
       WHERE app_id = ${game.appId}

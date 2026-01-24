@@ -229,7 +229,7 @@ async function ingestGame(game: GameIngestRequest, fetchFromSteam = true) {
       ${metacriticScore || null},
       ${gameType || null},
       ${cleanedMetadata ? JSON.stringify(cleanedMetadata) : null}::jsonb,
-      ${Prisma.raw(`'${vectorString}'::vector(384)`)},
+      ${Prisma.raw(`'${vectorString}'::vector(1536)`)},
       NOW(),
       NOW()
     )

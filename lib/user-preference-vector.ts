@@ -1,7 +1,7 @@
 /**
  * User Preference Vector Generation
  *
- * Generates personalized 384-dimensional recommendation vectors from user's
+ * Generates personalized 1536-dimensional recommendation vectors from user's
  * Steam library using sophisticated playtime-weighted averaging.
  *
  * Algorithm combines:
@@ -386,7 +386,7 @@ export async function generateUserPreferenceVector(
   }
 
   // Step 6: Calculate weighted average of embeddings
-  const vectorDim = 384;
+  const vectorDim = 1536; // OpenAI text-embedding-3-small dimensions
   const summedVector = new Array(vectorDim).fill(0);
   let totalWeight = 0;
 
@@ -458,7 +458,7 @@ export async function updateUserPreferenceVector(
     await prisma.$executeRaw`
       UPDATE user_profiles
       SET
-        preference_vector = ${Prisma.raw(`'${vectorString}'::vector(384)`)},
+        preference_vector = ${Prisma.raw(`'${vectorString}'::vector(1536)`)},
         last_updated = NOW(),
         games_analyzed = ${result.gamesAnalyzed},
         total_playtime_hours = ${totalPlaytimeHours}

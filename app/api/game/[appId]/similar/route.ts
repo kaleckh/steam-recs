@@ -44,7 +44,7 @@ export async function GET(
       SELECT
         app_id,
         name,
-        (embedding <=> (SELECT embedding FROM games WHERE app_id = ${appId})::vector(384)) as distance,
+        (embedding <=> (SELECT embedding FROM games WHERE app_id = ${appId})::vector(1536)) as distance,
         release_year,
         review_positive_pct,
         review_count,
@@ -53,7 +53,7 @@ export async function GET(
       FROM games
       WHERE embedding IS NOT NULL
         AND app_id != ${appId}
-      ORDER BY embedding <=> (SELECT embedding FROM games WHERE app_id = ${appId})::vector(384) ASC
+      ORDER BY embedding <=> (SELECT embedding FROM games WHERE app_id = ${appId})::vector(1536) ASC
       LIMIT ${limit}
     `;
 

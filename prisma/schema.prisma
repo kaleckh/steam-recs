@@ -25,8 +25,8 @@ model Game {
   // Full metadata as JSONB for flexibility
   metadata           Json?                    @db.JsonB
 
-  // Vector embedding for similarity search
-  embedding          Unsupported("vector(384)")? @map("embedding")
+  // Vector embedding for similarity search (OpenAI text-embedding-3-small)
+  embedding          Unsupported("vector(1536)")? @map("embedding")
 
   createdAt          DateTime                 @default(now()) @map("created_at")
   updatedAt          DateTime                 @updatedAt @map("updated_at")
@@ -47,10 +47,10 @@ model UserProfile {
   steamId            String?                  @unique @map("steam_id") // Steam user ID (optional)
 
   // Personalized recommendation vector (computed from played games)
-  preferenceVector   Unsupported("vector(384)")? @map("preference_vector")
+  preferenceVector   Unsupported("vector(1536)")? @map("preference_vector")
 
   // Learned vector (dynamically updated from feedback - PREMIUM ONLY)
-  learnedVector      Unsupported("vector(384)")? @map("learned_vector")
+  learnedVector      Unsupported("vector(1536)")? @map("learned_vector")
 
   // Subscription tier
   subscriptionTier   String                   @default("free") @map("subscription_tier") // 'free' or 'premium'

@@ -33,15 +33,15 @@ export default function SimilarGames({ games }: SimilarGamesProps) {
                 className="group card-arcade rounded-lg overflow-hidden"
               >
                 {/* Header Image */}
-                <div className="relative">
+                <div className="relative bg-terminal-dark">
                   {game.headerImage ? (
                     <img
                       src={game.headerImage}
                       alt={game.name}
-                      className="w-full aspect-[460/215] object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full aspect-video object-contain group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
-                    <div className="w-full aspect-[460/215] bg-terminal-dark flex items-center justify-center">
+                    <div className="w-full aspect-video bg-terminal-dark flex items-center justify-center">
                       <span className="text-gray-600 text-xs font-mono">NO IMAGE</span>
                     </div>
                   )}

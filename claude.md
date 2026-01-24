@@ -8,7 +8,7 @@
 - **Backend**: Next.js API routes
 - **Database**: PostgreSQL with pgvector extension
 - **ORM**: Prisma (with driver adapters for edge compatibility)
-- **ML/AI**: @xenova/transformers for generating 384-dimensional embeddings
+- **ML/AI**: OpenAI text-embedding-3-small for generating 1536-dimensional embeddings
 - **Data Source**: Steam API
 
 ## Project Structure
@@ -37,13 +37,13 @@ The `Game` model stores:
 - Metrics: `reviewPositivePct`, `reviewCount`, `metacriticScore`, `releaseYear`
 - Filtering: `isFree`
 - Full metadata: `metadata` (JSONB for flexibility)
-- **Vector embedding**: 384-dimensional vector for semantic search
+- **Vector embedding**: 1536-dimensional vector for semantic search
 
 Indexes on: `releaseYear`, `reviewPositivePct`, `isFree`, `type`
 
 ## Key Features & Architecture
 1. **Data Ingestion**: Scripts fetch game data from Steam API and process it
-2. **Embedding Generation**: Game descriptions/metadata converted to 384-dim vectors using transformers
+2. **Embedding Generation**: Game descriptions/metadata converted to 1536-dim vectors using transformers
 3. **Vector Search**: pgvector extension enables similarity search for recommendations
 4. **Filtering**: Structured fields allow filtering by review score, release date, price, etc.
 
@@ -64,7 +64,7 @@ Required in `.env`:
 ## Important Considerations
 
 ### When Working on This Project:
-1. **Vector Operations**: The `embedding` field is `vector(384)` - ensure pgvector extension is enabled in Postgres
+1. **Vector Operations**: The `embedding` field is `vector(1536)` - ensure pgvector extension is enabled in Postgres
 2. **Prisma Type Safety**: The `embedding` field is `Unsupported()` in Prisma, so raw SQL may be needed for vector operations
 3. **Edge Compatibility**: Uses Prisma driver adapters for potential edge deployment
 4. **Large Data**: Steam has thousands of games - pagination and efficient queries are important
@@ -80,7 +80,7 @@ Required in `.env`:
 
 ### Testing & Validation:
 - Test vector similarity queries with various inputs
-- Validate embedding dimensions (must be 384)
+- Validate embedding dimensions (must be 1536)
 - Check game data quality after ingestion
 - Verify filters work correctly with indexed fields
 
@@ -107,7 +107,7 @@ Required in `.env`:
 
 ### When Debugging:
 - Check database connection and pgvector extension
-- Verify embedding dimensions match schema (384)
+- Verify embedding dimensions match schema (1536)
 - Look for Steam API rate limiting or malformed responses
 - Check Prisma query logs for performance issues
 

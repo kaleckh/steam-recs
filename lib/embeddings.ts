@@ -1,6 +1,18 @@
 import { pipeline, FeatureExtractionPipeline } from '@xenova/transformers';
+import OpenAI from 'openai';
 
-// Singleton pattern for the transformer model
+// OpenAI client for embeddings (lazy-loaded to allow env vars to be set first)
+let openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!openai) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return openai;
+}
+
+// Singleton pattern for the transformer model (legacy)
 let embeddingPipeline: FeatureExtractionPipeline | null = null;
 let initializationPromise: Promise<FeatureExtractionPipeline> | null = null;
 
@@ -232,24 +244,25 @@ export function createEmbeddingText(params: {
 }
 
 /**
- * Generate a 384-dimensional embedding vector for the given text.
+ * Generate a 384-dimensional embedding vector for the given text using MiniLM (legacy).
  * @param text - The text to embed
  * @returns Array of 384 numbers representing the embedding
+ * @deprecated Use generateOpenAIEmbedding for better semantic understanding
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
     const pipe = await getEmbeddingPipeline();
-    
+
     // Generate embedding
     const output = await pipe(text, { pooling: 'mean', normalize: true });
-    
+
     // Extract the embedding array
     const embedding = Array.from(output.data as Float32Array);
-    
+
     if (embedding.length !== 384) {
       throw new Error(`Expected 384-dimensional embedding, got ${embedding.length}`);
     }
-    
+
     return embedding;
   } catch (error) {
     throw new Error(`Embedding generation failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -257,13 +270,68 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 }
 
 /**
- * Generate embedding from comprehensive game metadata.
- * 
- * This function accepts rich metadata from Steam API and constructs
- * an optimized text representation for semantic similarity matching.
- * 
+ * Generate a 1536-dimensional embedding vector using OpenAI's text-embedding-3-small.
+ *
+ * This model has MUCH better semantic understanding than MiniLM:
+ * - Understands game concepts, genres, and vibes
+ * - Doesn't confuse word overlap with semantic similarity
+ * - Captures nuanced relationships (e.g., "souls-like" → Dark Souls, Elden Ring)
+ *
+ * @param text - The text to embed
+ * @returns Array of 1536 numbers representing the embedding
+ */
+export async function generateOpenAIEmbedding(text: string): Promise<number[]> {
+  try {
+    const response = await getOpenAI().embeddings.create({
+      model: 'text-embedding-3-small',
+      input: text,
+    });
+
+    const embedding = response.data[0].embedding;
+
+    if (embedding.length !== 1536) {
+      throw new Error(`Expected 1536-dimensional embedding, got ${embedding.length}`);
+    }
+
+    return embedding;
+  } catch (error) {
+    throw new Error(`OpenAI embedding failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * Batch generate embeddings using OpenAI (up to 2048 inputs per call).
+ * Much more efficient than individual calls for bulk operations.
+ *
+ * @param texts - Array of texts to embed
+ * @returns Array of 1536-dimensional embedding vectors
+ */
+export async function generateOpenAIEmbeddingsBatch(texts: string[]): Promise<number[][]> {
+  if (texts.length === 0) return [];
+  if (texts.length > 2048) {
+    throw new Error(`Batch size ${texts.length} exceeds OpenAI limit of 2048`);
+  }
+
+  try {
+    const response = await getOpenAI().embeddings.create({
+      model: 'text-embedding-3-small',
+      input: texts,
+    });
+
+    // Sort by index to maintain order (OpenAI returns in same order but let's be safe)
+    const sorted = response.data.sort((a, b) => a.index - b.index);
+    return sorted.map(d => d.embedding);
+  } catch (error) {
+    throw new Error(`OpenAI batch embedding failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * Generate embedding from comprehensive game metadata using MiniLM (legacy).
+ *
  * @param params - Comprehensive game metadata
  * @returns 384-dimensional embedding vector (MiniLM-L6-v2)
+ * @deprecated Use generateGameEmbeddingOpenAI for better semantic understanding
  */
 export async function generateGameEmbedding(params: {
   name: string;
@@ -283,13 +351,45 @@ export async function generateGameEmbedding(params: {
   contentDescriptors?: string; // Content warnings/themes
 }): Promise<number[]> {
   const text = createEmbeddingText(params);
-  
+
   // Log embedding text length for monitoring
   if (text.length > 2000) {
     console.warn(`Embedding text for "${params.name}" is ${text.length} chars (may be truncated)`);
   }
-  
+
   return generateEmbedding(text);
+}
+
+/**
+ * Generate embedding from comprehensive game metadata using OpenAI.
+ *
+ * This is the RECOMMENDED function for game embeddings:
+ * - Uses OpenAI's text-embedding-3-small (1536 dimensions)
+ * - Much better semantic understanding than MiniLM
+ * - Captures game "vibes" and concepts accurately
+ *
+ * @param params - Comprehensive game metadata
+ * @returns 1536-dimensional embedding vector
+ */
+export async function generateGameEmbeddingOpenAI(params: {
+  name: string;
+  shortDescription?: string;
+  detailedDescription?: string;
+  aboutTheGame?: string;
+  genres?: string[];
+  categories?: string[];
+  developers?: string[];
+  publishers?: string[];
+  releaseYear?: number;
+  reviewCount?: number;
+  reviewPositivePct?: number;
+  metacriticScore?: number;
+  isFree?: boolean;
+  tags?: string[];
+  contentDescriptors?: string;
+}): Promise<number[]> {
+  const text = createEmbeddingText(params);
+  return generateOpenAIEmbedding(text);
 }
 
 /**

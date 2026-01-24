@@ -27,13 +27,13 @@ export default function GameCard({ game }: GameCardProps) {
         className="block"
       >
         {/* Header Image */}
-        <div className="relative aspect-[4/3] overflow-hidden bg-terminal-dark">
+        <div className="relative aspect-video overflow-hidden bg-terminal-dark">
           {game.headerImage ? (
             <>
               <img
                 src={game.headerImage}
                 alt={game.name}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110"
               />
               {/* Overlay on hover */}
               <div className="absolute inset-0 bg-gradient-to-t from-terminal-dark via-transparent to-transparent opacity-60" />

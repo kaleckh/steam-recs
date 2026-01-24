@@ -23,12 +23,12 @@ interface RecommendationResult {
 
 /**
  * POST /api/recommend
- * 
+ *
  * Generate game recommendations based on a user embedding vector.
  * Uses pgvector cosine distance to find similar games.
- * 
+ *
  * Body:
- * - userVector: number[] (384 dimensions)
+ * - userVector: number[] (1536 dimensions - OpenAI text-embedding-3-small)
  * - limit?: number (default 10, max 100)
  * - excludeAppIds?: number[] (games to exclude, e.g. already owned)
  * - nicheBoost?: boolean (boost lesser-known games)
@@ -92,9 +92,9 @@ function validateRequest(body: any): string | null {
     return 'userVector must be an array';
   }
 
-  // Check vector dimensions
-  if (body.userVector.length !== 384) {
-    return `userVector must have exactly 384 dimensions (got ${body.userVector.length})`;
+  // Check vector dimensions (OpenAI text-embedding-3-small)
+  if (body.userVector.length !== 1536) {
+    return `userVector must have exactly 1536 dimensions (got ${body.userVector.length})`;
   }
 
   // Check all elements are numbers
@@ -153,7 +153,7 @@ async function generateRecommendations({
   // Example: A game with very few reviews gets up to 20% distance reduction
   const distanceExpression = nicheBoost
     ? Prisma.sql`
-      (embedding <=> ${Prisma.raw(`'${vectorString}'::vector(384)`)}) * 
+      (embedding <=> ${Prisma.raw(`'${vectorString}'::vector(1536)`)}) * 
       CASE 
         WHEN (metadata->>'review_count')::int IS NOT NULL AND (metadata->>'review_count')::int < 1000 
         THEN 0.8  -- 20% boost for games with < 1000 reviews
@@ -161,7 +161,7 @@ async function generateRecommendations({
         THEN 0.9  -- 10% boost for games with < 5000 reviews
         ELSE 1.0  -- No boost for popular games
       END`
-    : Prisma.sql`embedding <=> ${Prisma.raw(`'${vectorString}'::vector(384)`)}`;
+    : Prisma.sql`embedding <=> ${Prisma.raw(`'${vectorString}'::vector(1536)`)}`;
 
   // Execute vector similarity search
   // Uses <=> operator for cosine distance (optimized by HNSW index)
