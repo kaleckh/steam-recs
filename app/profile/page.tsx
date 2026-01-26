@@ -36,7 +36,7 @@ type ProfileState =
 function ProfileContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { profile, isPremium, isLoading: authLoading, refreshProfile } = useAuth();
+  const { user, profile, isPremium, isLoading: authLoading, refreshProfile } = useAuth();
 
   const [state, setState] = useState<ProfileState>({ stage: 'loading' });
   const [filters, setFilters] = useState<RecommendationFilters>({
@@ -136,8 +136,15 @@ function ProfileContent() {
       return;
     }
 
+    // Auth is done loading - check if we have a profile
     if (!profile) {
-      setState({ stage: 'loading' });
+      // If we have a user but no profile, try to refresh
+      if (user) {
+        setState({ stage: 'error', error: 'Failed to load your profile. Please click retry or refresh the page.' });
+      } else {
+        // No user means they need to log in - redirect handled by middleware
+        setState({ stage: 'loading' });
+      }
       return;
     }
 
@@ -148,7 +155,7 @@ function ProfileContent() {
       // User needs to link Steam account
       setState({ stage: 'link_steam' });
     }
-  }, [authLoading, profile, loadRecommendations]);
+  }, [authLoading, profile, user, loadRecommendations]);
 
   const handleLinkSteam = async (steamInput: string) => {
     if (!profile?.id) return;
@@ -251,8 +258,15 @@ function ProfileContent() {
     handleLinkSteam(profile.steamId);
   };
 
-  const handleRetry = () => {
-    if (profile?.steamId) {
+  const handleRetry = async () => {
+    if (!profile) {
+      // Profile is missing - try to refresh it
+      setState({ stage: 'loading' });
+      await refreshProfile();
+      return;
+    }
+
+    if (profile.steamId) {
       loadRecommendations();
     } else {
       setState({ stage: 'link_steam' });

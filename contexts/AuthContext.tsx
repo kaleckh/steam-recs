@@ -37,10 +37,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchProfile = useCallback(async (supabaseUserId: string) => {
     try {
-      const res = await fetch(`/api/user/profile?supabaseUserId=${supabaseUserId}`);
+      const res = await fetch(`/api/user/profile?supabaseUserId=${supabaseUserId}`, {
+        credentials: 'include',
+      });
       if (res.ok) {
         const data = await res.json();
         setProfile(data.profile);
+      } else {
+        console.error('Profile fetch failed:', res.status, await res.text());
       }
     } catch (error) {
       console.error('Failed to fetch profile:', error);
