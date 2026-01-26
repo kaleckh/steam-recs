@@ -419,10 +419,16 @@ function ProfileContent() {
         {state.stage === 'error' && (
           <div className="space-y-4">
             <ErrorDisplay error={state.error} onRetry={handleRetry} />
-            {/* Always show sign out option in error state */}
-            <div className="text-center">
-              <p className="text-gray-500 text-sm font-mono mb-3">
-                If the problem persists, try signing out:
+            {/* Options to recover */}
+            <div className="text-center space-y-4">
+              <button
+                onClick={() => setState({ stage: 'link_steam' })}
+                className="px-6 py-3 bg-neon-cyan/20 border border-neon-cyan/50 text-neon-cyan rounded-lg font-mono text-sm hover:bg-neon-cyan/30 transition-colors"
+              >
+                ENTER STEAM ID
+              </button>
+              <p className="text-gray-500 text-sm font-mono">
+                or
               </p>
               <button
                 onClick={signOut}

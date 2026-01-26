@@ -48,8 +48,9 @@ export async function GET(request: NextRequest) {
         where: { email: user.email },
       });
 
-      if (existingByEmail && !existingByEmail.supabaseUserId) {
-        // Link existing profile to this Supabase user
+      if (existingByEmail) {
+        // Link existing profile to this Supabase user (even if it had a different supabaseUserId)
+        // This handles the case where user was deleted and re-created
         profile = await prisma.userProfile.update({
           where: { id: existingByEmail.id },
           data: { supabaseUserId },
