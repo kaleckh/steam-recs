@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   getRecommendations,
   getFriendlyErrorMessage,
@@ -33,8 +33,9 @@ type ProfileState =
     }
   | { stage: 'error'; error: string };
 
-export default function ProfilePage() {
+function ProfileContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { profile, isPremium, isLoading: authLoading, refreshProfile } = useAuth();
 
   const [state, setState] = useState<ProfileState>({ stage: 'loading' });
@@ -118,6 +119,15 @@ export default function ProfilePage() {
       });
     }
   }, [profile?.id, profile?.gamesAnalyzed, profile?.totalPlaytimeHours, filters, fetchTopGamesData]);
+
+  // Check for pending search from landing page and redirect
+  useEffect(() => {
+    const pendingSearch = sessionStorage.getItem('pendingSearch');
+    if (pendingSearch) {
+      sessionStorage.removeItem('pendingSearch');
+      router.replace(`/search?q=${encodeURIComponent(pendingSearch)}`);
+    }
+  }, [router]);
 
   // Initialize page based on auth state
   useEffect(() => {
@@ -511,5 +521,24 @@ export default function ProfilePage() {
         />
       )}
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-terminal-dark flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 border-4 border-neon-cyan/30 border-t-neon-cyan rounded-full animate-spin" />
+        <p className="text-neon-cyan font-mono text-sm">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ProfileContent />
+    </Suspense>
   );
 }

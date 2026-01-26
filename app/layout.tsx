@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import TopNav from "@/components/navigation/TopNav";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -30,7 +31,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <TopNav />
+          <Suspense fallback={<div className="h-14 bg-[#0a0a0f] border-b border-terminal-border" />}>
+            <TopNav />
+          </Suspense>
           {children}
         </AuthProvider>
       </body>

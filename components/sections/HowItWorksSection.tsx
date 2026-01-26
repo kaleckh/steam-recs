@@ -2,47 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-const steps = [
-  {
-    number: '01',
-    title: 'CONNECT',
-    subtitle: 'Steam Profile',
-    description: 'Enter your Steam ID or profile URL. Your library stays completely private.',
-    icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-      </svg>
-    ),
-    color: 'cyan',
-  },
-  {
-    number: '02',
-    title: 'ANALYZE',
-    subtitle: 'Neural Processing',
-    description: 'Our AI examines your playtime, genres, and preferences to build your taste profile.',
-    icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-      </svg>
-    ),
-    color: 'orange',
-  },
-  {
-    number: '03',
-    title: 'DISCOVER',
-    subtitle: 'Perfect Matches',
-    description: 'Get personalized recommendations including hidden gems and trending titles.',
-    icon: (
-      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-      </svg>
-    ),
-    color: 'green',
-  },
-];
-
 export default function HowItWorksSection() {
-  const [visibleSteps, setVisibleSteps] = useState<boolean[]>([false, false, false]);
+  const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -50,16 +11,7 @@ export default function HowItWorksSection() {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            // Stagger the animations
-            steps.forEach((_, index) => {
-              setTimeout(() => {
-                setVisibleSteps((prev) => {
-                  const newVisible = [...prev];
-                  newVisible[index] = true;
-                  return newVisible;
-                });
-              }, index * 200);
-            });
+            setIsVisible(true);
           }
         });
       },
@@ -73,39 +25,6 @@ export default function HowItWorksSection() {
     return () => observer.disconnect();
   }, []);
 
-  const getColorClasses = (color: string) => {
-    switch (color) {
-      case 'cyan':
-        return {
-          border: 'border-neon-cyan',
-          text: 'text-neon-cyan',
-          bg: 'bg-neon-cyan/10',
-          glow: 'box-glow-cyan',
-        };
-      case 'orange':
-        return {
-          border: 'border-neon-orange',
-          text: 'text-neon-orange',
-          bg: 'bg-neon-orange/10',
-          glow: 'box-glow-orange',
-        };
-      case 'green':
-        return {
-          border: 'border-neon-green',
-          text: 'text-neon-green',
-          bg: 'bg-neon-green/10',
-          glow: 'box-glow-green',
-        };
-      default:
-        return {
-          border: 'border-neon-cyan',
-          text: 'text-neon-cyan',
-          bg: 'bg-neon-cyan/10',
-          glow: 'box-glow-cyan',
-        };
-    }
-  };
-
   return (
     <section ref={sectionRef} className="py-32 px-4 sm:px-6 lg:px-8 relative">
       {/* Background decoration */}
@@ -113,88 +32,163 @@ export default function HowItWorksSection() {
 
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Section Header */}
-        <div className="text-center mb-20">
+        <div className="text-center mb-16">
           <span className="pixel-font text-xs text-neon-orange tracking-widest uppercase mb-4 block">
-            // PROCESS
+            // TWO WAYS TO DISCOVER
           </span>
           <h2 className="orbitron text-4xl md:text-5xl lg:text-6xl font-black text-white mb-6">
             HOW IT <span className="text-neon-cyan glow-cyan">WORKS</span>
           </h2>
           <p className="text-lg text-gray-400 font-mono max-w-2xl mx-auto">
-            <span className="text-neon-green">&gt;</span> Three simple steps to discover your next obsession
+            <span className="text-neon-green">&gt;</span> Choose your path to finding the perfect game
           </p>
         </div>
 
-        {/* Steps Grid */}
-        <div className="grid md:grid-cols-3 gap-8">
-          {steps.map((step, index) => {
-            const colors = getColorClasses(step.color);
-            return (
-              <div
-                key={step.number}
-                className={`
-                  transform transition-all duration-700
-                  ${visibleSteps[index] ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}
-                `}
-              >
-                <div className={`terminal-box rounded-lg overflow-hidden h-full group hover:${colors.glow} transition-all duration-300`}>
-                  {/* Card Header */}
-                  <div className={`px-6 py-4 border-b border-terminal-border flex items-center justify-between`}>
-                    <span className={`orbitron text-3xl font-black ${colors.text}`}>
-                      {step.number}
-                    </span>
-                    <div className={`w-12 h-12 rounded-lg ${colors.bg} border ${colors.border} flex items-center justify-center ${colors.text}`}>
-                      {step.icon}
-                    </div>
-                  </div>
+        {/* Two Paths */}
+        <div className={`grid md:grid-cols-2 gap-8 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+          {/* Path 1: AI Search */}
+          <div className="terminal-box rounded-lg overflow-hidden group hover:border-neon-cyan transition-all">
+            <div className="px-6 py-4 border-b border-terminal-border bg-neon-cyan/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-neon-cyan/20 border border-neon-cyan flex items-center justify-center">
+                  <svg className="w-5 h-5 text-neon-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="orbitron text-xl font-bold text-neon-cyan">AI SEARCH</h3>
+                  <p className="text-xs text-gray-500 font-mono">Instant Discovery</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 space-y-6">
+              <p className="text-gray-400 font-mono text-sm">
+                Describe what you&apos;re looking for in plain English. Our AI understands context, vibes, and comparisons.
+              </p>
 
-                  {/* Card Body */}
-                  <div className="p-6">
-                    <h3 className={`orbitron text-2xl font-bold ${colors.text} mb-1`}>
-                      {step.title}
-                    </h3>
-                    <p className="text-sm text-gray-500 font-mono mb-4 uppercase tracking-wider">
-                      {step.subtitle}
-                    </p>
-                    <p className="text-gray-400 font-mono text-sm leading-relaxed">
-                      {step.description}
-                    </p>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-neon-cyan font-mono text-sm">01</span>
+                  <div>
+                    <p className="text-white font-mono text-sm">Type your request</p>
+                    <p className="text-gray-600 text-xs font-mono">&quot;relaxing games like Stardew Valley&quot;</p>
                   </div>
-
-                  {/* Progress indicator */}
-                  <div className="px-6 pb-6">
-                    <div className="h-1 progress-bar-retro rounded overflow-hidden">
-                      <div
-                        className={`h-full transition-all duration-1000 delay-500 ${
-                          visibleSteps[index] ? 'w-full' : 'w-0'
-                        } ${step.color === 'cyan' ? 'progress-fill-cyan' : step.color === 'orange' ? 'progress-fill-orange' : 'progress-fill-green'}`}
-                      />
-                    </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-neon-cyan font-mono text-sm">02</span>
+                  <div>
+                    <p className="text-white font-mono text-sm">AI searches 70,000+ games</p>
+                    <p className="text-gray-600 text-xs font-mono">Semantic search, not just keywords</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-neon-cyan font-mono text-sm">03</span>
+                  <div>
+                    <p className="text-white font-mono text-sm">Get instant results</p>
+                    <p className="text-gray-600 text-xs font-mono">Ranked by relevance to your query</p>
                   </div>
                 </div>
               </div>
-            );
-          })}
+
+              <div className="pt-4 border-t border-terminal-border">
+                <a
+                  href="/"
+                  className="inline-flex items-center gap-2 text-neon-cyan font-mono text-sm hover:underline"
+                >
+                  <span>Try AI Search</span>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Path 2: Personalized Recommendations */}
+          <div className="terminal-box rounded-lg overflow-hidden group hover:border-neon-orange transition-all">
+            <div className="px-6 py-4 border-b border-terminal-border bg-neon-orange/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-neon-orange/20 border border-neon-orange flex items-center justify-center">
+                  <svg className="w-5 h-5 text-neon-orange" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="orbitron text-xl font-bold text-neon-orange">PERSONALIZED</h3>
+                  <p className="text-xs text-gray-500 font-mono">Based on Your Library</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 space-y-6">
+              <p className="text-gray-400 font-mono text-sm">
+                Connect your Steam account. Our AI analyzes your playtime, and learns from your votes to get smarter over time.
+              </p>
+
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-neon-orange font-mono text-sm">01</span>
+                  <div>
+                    <p className="text-white font-mono text-sm">Enter your Steam ID</p>
+                    <p className="text-gray-600 text-xs font-mono">Profile URL or Steam ID</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-neon-orange font-mono text-sm">02</span>
+                  <div>
+                    <p className="text-white font-mono text-sm">AI builds your taste profile</p>
+                    <p className="text-gray-600 text-xs font-mono">From playtime, genres, and patterns</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-neon-orange font-mono text-sm">03</span>
+                  <div>
+                    <p className="text-white font-mono text-sm">Get personalized picks</p>
+                    <p className="text-gray-600 text-xs font-mono">Hidden gems you&apos;ll actually love</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-neon-green font-mono text-sm">04</span>
+                  <div>
+                    <p className="text-white font-mono text-sm">Vote to teach the AI</p>
+                    <p className="text-gray-600 text-xs font-mono">👍 👎 — it learns your exact taste</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-terminal-border">
+                <a
+                  href="/profile"
+                  className="inline-flex items-center gap-2 text-neon-orange font-mono text-sm hover:underline"
+                >
+                  <span>Connect Steam</span>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Connecting lines (desktop only) */}
-        <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 w-2/3 h-0.5 bg-terminal-border -z-10" style={{ marginTop: '2rem' }}>
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-neon-cyan box-glow-cyan" />
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-neon-orange box-glow-orange" />
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-neon-green box-glow-green" />
-        </div>
-
-        {/* Bottom CTA */}
-        <div className="mt-20 text-center">
-          <a
-            href="/profile"
-            className="inline-flex items-center gap-3 btn-arcade rounded-lg py-4 px-10 text-lg"
-          >
-            <span>START ANALYSIS</span>
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>
-          </a>
+        {/* Bonus: Combine both */}
+        <div className={`mt-12 text-center transition-all duration-700 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+          <div className="inline-block terminal-box rounded-lg px-8 py-6">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-neon-cyan/20 to-neon-orange/20 border border-neon-green flex items-center justify-center">
+                <svg className="w-6 h-6 text-neon-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div className="text-left">
+                <p className="text-white font-mono text-sm">
+                  <span className="text-neon-green font-bold">PRO TIP:</span> Use both together
+                </p>
+                <p className="text-gray-500 font-mono text-xs">
+                  AI Search + Your Library = Results personalized to your taste
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>

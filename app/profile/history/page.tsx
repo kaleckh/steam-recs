@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { GameRecommendation } from '@/lib/api-client';
 
@@ -14,7 +14,7 @@ interface FeedbackHistory {
   disliked: FeedbackHistoryItem[];
 }
 
-export default function HistoryPage() {
+function HistoryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const userId = searchParams.get('userId');
@@ -47,14 +47,14 @@ export default function HistoryPage() {
       } else {
         setError(data.error || 'Failed to load feedback history');
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred while loading your feedback history');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRemoveFeedback = async (appId: string, feedbackType: string) => {
+  const handleRemoveFeedback = async (appId: string) => {
     if (!userId) return;
 
     try {
@@ -123,12 +123,12 @@ export default function HistoryPage() {
     );
   }
 
-  const GameCard = ({ game, feedbackType }: { game: FeedbackHistoryItem; feedbackType: string }) => (
+  const GameCard = ({ game }: { game: FeedbackHistoryItem }) => (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow group">
       <div className="relative aspect-video overflow-hidden bg-gray-900">
-        {game.metadata?.headerImage ? (
+        {game.headerImage ? (
           <img
-            src={game.metadata.headerImage}
+            src={game.headerImage}
             alt={game.name}
             className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
           />
@@ -139,7 +139,7 @@ export default function HistoryPage() {
         )}
         <div className="absolute top-3 right-3">
           <button
-            onClick={() => handleRemoveFeedback(game.appId, feedbackType)}
+            onClick={() => handleRemoveFeedback(game.appId)}
             className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg shadow-lg transition-colors"
             title="Remove from history"
           >
@@ -153,7 +153,7 @@ export default function HistoryPage() {
         <h3 className="font-semibold text-gray-900 mb-2 line-clamp-1">{game.name}</h3>
         <div className="flex items-center justify-between text-sm">
           <span className="text-gray-500">
-            {game.metadata?.releaseDate ? new Date(game.metadata.releaseDate).getFullYear() : 'N/A'}
+            {game.releaseYear ?? 'N/A'}
           </span>
           <a
             href={`https://store.steampowered.com/app/${game.appId}`}
@@ -189,7 +189,7 @@ export default function HistoryPage() {
           </button>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Your Rating History</h1>
           <p className="text-lg text-gray-500">
-            View all games you've rated and manage your feedback
+            View all games you&apos;ve rated and manage your feedback
           </p>
         </div>
 
@@ -207,12 +207,12 @@ export default function HistoryPage() {
 
           {history.liked.length === 0 ? (
             <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
-              <p className="text-gray-500">You haven't liked any games yet. Start rating recommendations!</p>
+              <p className="text-gray-500">You haven&apos;t liked any games yet. Start rating recommendations!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {history.liked.map((game) => (
-                <GameCard key={game.appId} game={game} feedbackType="liked" />
+                <GameCard key={game.appId} game={game} />
               ))}
             </div>
           )}
@@ -226,23 +226,62 @@ export default function HistoryPage() {
               <span>Disliked Games</span>
             </h2>
             <p className="text-red-100 mt-2">
-              {history.disliked.length} games you disliked or weren't interested in
+              {history.disliked.length} games you disliked or weren&apos;t interested in
             </p>
           </div>
 
           {history.disliked.length === 0 ? (
             <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
-              <p className="text-gray-500">You haven't disliked any games yet.</p>
+              <p className="text-gray-500">You haven&apos;t disliked any games yet.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {history.disliked.map((game) => (
-                <GameCard key={game.appId} game={game} feedbackType="disliked" />
+                <GameCard key={game.appId} game={game} />
               ))}
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-center items-center py-20">
+          <svg
+            className="animate-spin h-12 w-12 text-blue-600"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            ></circle>
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function HistoryPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <HistoryContent />
+    </Suspense>
   );
 }

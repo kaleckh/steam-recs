@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 export type ProfileTab = 'for-you' | 'ai-search' | 'analytics' | 'library';
 
 interface ProfileTabsProps {
@@ -7,7 +9,7 @@ interface ProfileTabsProps {
   onTabChange: (tab: ProfileTab) => void;
 }
 
-const tabs: { id: ProfileTab; label: string; icon: JSX.Element; premium?: boolean }[] = [
+const tabs: { id: ProfileTab; label: string; icon: React.ReactNode; premium?: boolean }[] = [
   {
     id: 'for-you',
     label: 'FOR YOU',

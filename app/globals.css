@@ -623,6 +623,10 @@ body {
 .bg-terminal-mid { background: var(--terminal-mid); }
 .bg-terminal-light { background: var(--terminal-light); }
 
+.bg-neon-cyan { background: var(--neon-cyan); }
+.bg-neon-orange { background: var(--neon-orange); }
+.bg-neon-green { background: var(--neon-green); }
+
 .border-neon-cyan { border-color: var(--neon-cyan); }
 .border-neon-orange { border-color: var(--neon-orange); }
 .border-neon-green { border-color: var(--neon-green); }

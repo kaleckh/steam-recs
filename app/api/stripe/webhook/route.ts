@@ -34,13 +34,15 @@ export async function POST(request: NextRequest) {
         if (userId && subscriptionId) {
           const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
           const customerEmail = session.customer_details?.email;
+          // Stripe types don't expose current_period_end directly, access via any
+          const periodEnd = (subscription as unknown as { current_period_end: number }).current_period_end;
 
           await prisma.userProfile.update({
             where: { id: userId },
             data: {
               subscriptionTier: 'premium',
               stripeSubscriptionId: subscriptionId,
-              subscriptionExpiresAt: new Date(subscription.current_period_end * 1000),
+              subscriptionExpiresAt: new Date(periodEnd * 1000),
               ...(customerEmail && { email: customerEmail }),
             },
           });
@@ -50,12 +52,13 @@ export async function POST(request: NextRequest) {
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
+        const periodEnd = (subscription as unknown as { current_period_end: number }).current_period_end;
 
         await prisma.userProfile.updateMany({
           where: { stripeSubscriptionId: subscription.id },
           data: {
             subscriptionTier: subscription.status === 'active' ? 'premium' : 'free',
-            subscriptionExpiresAt: new Date(subscription.current_period_end * 1000),
+            subscriptionExpiresAt: new Date(periodEnd * 1000),
           },
         });
         break;
@@ -77,7 +80,7 @@ export async function POST(request: NextRequest) {
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId = invoice.subscription as string;
+        const subscriptionId = (invoice as unknown as { subscription: string | null }).subscription;
 
         if (subscriptionId) {
           await prisma.userProfile.updateMany({

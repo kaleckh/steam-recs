@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -17,6 +17,18 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect') || '/profile';
   const supabase = createClient();
+
+  // Check for pending search and redirect appropriately
+  const getRedirectUrl = () => {
+    if (typeof window !== 'undefined') {
+      const pendingSearch = sessionStorage.getItem('pendingSearch');
+      if (pendingSearch) {
+        sessionStorage.removeItem('pendingSearch');
+        return `/search?q=${encodeURIComponent(pendingSearch)}`;
+      }
+    }
+    return redirect;
+  };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +44,7 @@ export default function LoginPage() {
       if (error) {
         setError(error.message);
       } else {
-        router.push(redirect);
+        router.push(getRedirectUrl());
       }
     } catch {
       setError('An unexpected error occurred');
@@ -291,5 +303,27 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-terminal-dark flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="terminal-box rounded-lg overflow-hidden p-8">
+          <div className="flex justify-center">
+            <div className="w-8 h-8 border-2 border-neon-cyan/30 border-t-neon-cyan rounded-full animate-spin" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <LoginContent />
+    </Suspense>
   );
 }

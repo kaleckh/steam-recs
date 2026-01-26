@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 /**
  * GET /api/stats/overview
@@ -34,7 +35,7 @@ export async function GET() {
         where: {
           metadata: {
             path: ['price_overview'],
-            not: null
+            not: Prisma.DbNull
           }
         }
       }),
