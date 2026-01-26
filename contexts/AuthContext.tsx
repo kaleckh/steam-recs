@@ -48,10 +48,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = supabaseRef.current;
 
   const fetchProfile = useCallback(async (supabaseUserId: string) => {
+    const start = performance.now();
+    console.log('[Auth] Starting profile fetch');
     try {
       const res = await fetch(`/api/user/profile?supabaseUserId=${supabaseUserId}`, {
         credentials: 'include',
       });
+      console.log(`[Auth] Profile API responded in ${Math.round(performance.now() - start)}ms`);
       if (res.ok) {
         const data = await res.json();
         setProfile(data.profile);
@@ -72,14 +75,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Get initial session
     const initAuth = async () => {
+      const initStart = performance.now();
+      console.log('[Auth] Initializing auth');
       try {
+        const sessionStart = performance.now();
         const { data: { session: initialSession } } = await supabase.auth.getSession();
+        console.log(`[Auth] getSession took ${Math.round(performance.now() - sessionStart)}ms`);
         setSession(initialSession);
         setUser(initialSession?.user ?? null);
 
         if (initialSession?.user) {
           await fetchProfile(initialSession.user.id);
         }
+        console.log(`[Auth] Total init took ${Math.round(performance.now() - initStart)}ms`);
       } catch (error) {
         console.error('Auth init error:', error);
       } finally {

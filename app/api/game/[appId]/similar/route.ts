@@ -9,17 +9,22 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ appId: string }> }
 ) {
+  const startTime = Date.now();
   try {
     const { appId: appIdStr } = await params;
+    console.log(`[Similar Games API] Fetching similar games for ${appIdStr}`);
     const appId = BigInt(appIdStr);
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '12');
 
     // First, get the target game to ensure it exists
+    const targetCheckStart = Date.now();
     const targetGame = await prisma.game.findUnique({
       where: { appId },
       select: { name: true },
     });
+
+    console.log(`[Similar Games API] Target check took ${Date.now() - targetCheckStart}ms`);
 
     if (!targetGame) {
       return NextResponse.json(
@@ -29,6 +34,7 @@ export async function GET(
     }
 
     // Use raw SQL for vector similarity search
+    const vectorSearchStart = Date.now();
     const similarGames = await prisma.$queryRaw<
       Array<{
         app_id: bigint;
@@ -56,6 +62,7 @@ export async function GET(
       ORDER BY embedding <=> (SELECT embedding FROM games WHERE app_id = ${appId})::vector(1536) ASC
       LIMIT ${limit}
     `;
+    console.log(`[Similar Games API] Vector search took ${Date.now() - vectorSearchStart}ms`);
 
     // Format the response
     const formattedGames = similarGames.map((game) => {
@@ -79,6 +86,7 @@ export async function GET(
       };
     });
 
+    console.log(`[Similar Games API] Total request took ${Date.now() - startTime}ms`);
     return NextResponse.json({
       success: true,
       targetGame: targetGame.name,

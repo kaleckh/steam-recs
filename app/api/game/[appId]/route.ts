@@ -9,10 +9,13 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ appId: string }> }
 ) {
+  const startTime = Date.now();
   try {
     const { appId: appIdStr } = await params;
+    console.log(`[Game API] Fetching game ${appIdStr}`);
     const appId = BigInt(appIdStr);
 
+    const dbStart = Date.now();
     const game = await prisma.game.findUnique({
       where: { appId },
       select: {
@@ -28,6 +31,8 @@ export async function GET(
         createdAt: true,
       },
     });
+
+    console.log(`[Game API] DB query took ${Date.now() - dbStart}ms`);
 
     if (!game) {
       return NextResponse.json(
@@ -91,6 +96,7 @@ export async function GET(
       addedAt: game.createdAt.toISOString(),
     };
 
+    console.log(`[Game API] Total request took ${Date.now() - startTime}ms`);
     return NextResponse.json(gameData);
   } catch (error) {
     console.error('Error fetching game details:', error);

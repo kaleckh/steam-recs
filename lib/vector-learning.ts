@@ -267,6 +267,7 @@ async function updateLearnedVector(
 export async function getHybridVector(
   userId: string
 ): Promise<number[] | null> {
+  const start = Date.now();
   try {
     const result = await prisma.$queryRaw<
       Array<{
@@ -284,6 +285,7 @@ export async function getHybridVector(
       LIMIT 1
     `;
 
+    console.log(`[getHybridVector] DB query took ${Date.now() - start}ms`);
     if (result.length === 0) return null;
 
     const userData = result[0];

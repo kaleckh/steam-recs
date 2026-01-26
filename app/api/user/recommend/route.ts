@@ -25,6 +25,9 @@ import { getHybridVector } from '@/lib/vector-learning';
  * - List of recommended games with similarity scores and metadata
  */
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  console.log('[Recommend API] Request started');
+
   try {
     const body = await request.json();
 
@@ -40,6 +43,7 @@ export async function POST(request: NextRequest) {
     const excludeOwned = body.excludeOwned !== false; // Default true
 
     // Fetch user profile with preference vector and subscription info
+    const profileStart = Date.now();
     const userProfile = await prisma.$queryRaw<
       Array<{
         id: string;
@@ -63,6 +67,8 @@ export async function POST(request: NextRequest) {
       WHERE id = ${body.userId}
       LIMIT 1
     `;
+
+    console.log(`[Recommend API] Profile query took ${Date.now() - profileStart}ms`);
 
     if (userProfile.length === 0) {
       return NextResponse.json(
@@ -95,7 +101,9 @@ export async function POST(request: NextRequest) {
     let queryVector: number[] | null = null;
 
     // Always try to get hybrid vector for now
+    const hybridStart = Date.now();
     queryVector = await getHybridVector(body.userId);
+    console.log(`[Recommend API] Hybrid vector took ${Date.now() - hybridStart}ms`);
 
     // Fallback to preference vector if hybrid vector not available
     if (!queryVector) {
@@ -110,6 +118,7 @@ export async function POST(request: NextRequest) {
     const vectorString = `[${queryVector.join(',')}]`;
 
     // Get user's owned games (if excluding)
+    const excludeStart = Date.now();
     let ownedAppIds: bigint[] = [];
 
     if (excludeOwned) {
@@ -131,6 +140,7 @@ export async function POST(request: NextRequest) {
     });
 
     ratedAppIds = ratedGames.map(g => g.appId);
+    console.log(`[Recommend API] Exclude lists took ${Date.now() - excludeStart}ms (owned: ${ownedAppIds.length}, rated: ${ratedAppIds.length})`);
 
     // Combine owned and rated games for exclusion
     const excludeAppIds = [...ownedAppIds, ...ratedAppIds];
@@ -227,6 +237,7 @@ export async function POST(request: NextRequest) {
         : Prisma.empty;
 
     // Execute vector similarity search
+    const vectorStart = Date.now();
     const recommendations = await prisma.$queryRaw<
       Array<{
         app_id: bigint;
@@ -255,6 +266,7 @@ export async function POST(request: NextRequest) {
       ORDER BY embedding <=> ${Prisma.raw(`'${vectorString}'::vector(1536)`)} ASC
       LIMIT ${limit}
     `;
+    console.log(`[Recommend API] Vector search took ${Date.now() - vectorStart}ms`);
 
     // Transform results
     const results = recommendations.map(game => {
@@ -297,6 +309,8 @@ export async function POST(request: NextRequest) {
         developers: metadata.developers as string[] | undefined,
       };
     });
+
+    console.log(`[Recommend API] Total request took ${Date.now() - startTime}ms`);
 
     return NextResponse.json({
       success: true,

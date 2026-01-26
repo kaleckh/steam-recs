@@ -76,12 +76,16 @@ export default function GameDetailPage() {
 
   useEffect(() => {
     async function fetchGameData() {
+      const totalStart = performance.now();
+      console.log(`[Game Page] Loading game ${appId}`);
       setIsLoading(true);
       setError(null);
 
       try {
         // Fetch game details
+        const gameStart = performance.now();
         const gameResponse = await fetch(`/api/game/${appId}`);
+        console.log(`[Game Page] Game API responded in ${Math.round(performance.now() - gameStart)}ms`);
         if (!gameResponse.ok) {
           throw new Error('Game not found');
         }
@@ -89,11 +93,14 @@ export default function GameDetailPage() {
         setGame(gameData);
 
         // Fetch similar games
+        const similarStart = performance.now();
         const similarResponse = await fetch(`/api/game/${appId}/similar?limit=12`);
+        console.log(`[Game Page] Similar API responded in ${Math.round(performance.now() - similarStart)}ms`);
         if (similarResponse.ok) {
           const similarData = await similarResponse.json();
           setSimilarGames(similarData.similarGames || []);
         }
+        console.log(`[Game Page] Total load time ${Math.round(performance.now() - totalStart)}ms`);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load game');
       } finally {

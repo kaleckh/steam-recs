@@ -3,6 +3,9 @@ import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  console.log('[Profile API] Request started');
+
   try {
     const supabaseUserId = request.nextUrl.searchParams.get('supabaseUserId');
 
@@ -11,14 +14,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify the request is from the authenticated user
+    const authStart = Date.now();
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    console.log(`[Profile API] Auth check took ${Date.now() - authStart}ms`);
 
     if (!user || user.id !== supabaseUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Find or create profile for this Supabase user
+    const dbStart = Date.now();
     let profile = await prisma.userProfile.findUnique({
       where: { supabaseUserId },
       select: {
@@ -86,6 +92,8 @@ export async function GET(request: NextRequest) {
         },
       });
     }
+    console.log(`[Profile API] DB queries took ${Date.now() - dbStart}ms`);
+    console.log(`[Profile API] Total request took ${Date.now() - startTime}ms`);
 
     return NextResponse.json({ profile });
   } catch (error) {
