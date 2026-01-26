@@ -44,8 +44,9 @@ model Game {
 
 model UserProfile {
   id                 String                   @id @default(cuid())
-  steamId            String?                  @unique @map("steam_id") // Steam user ID (optional)
-  email              String?                  @unique // From Stripe checkout
+  supabaseUserId     String?                  @unique @map("supabase_user_id") // Supabase auth user ID
+  steamId            String?                  @map("steam_id") // Steam user ID (not unique - multiple users can analyze same library)
+  email              String?                  @unique // From Stripe checkout or Supabase auth
 
   // Personalized recommendation vector (computed from played games)
   preferenceVector   Unsupported("vector(1536)")? @map("preference_vector")
@@ -81,6 +82,7 @@ model UserProfile {
   feedback           UserFeedback[]
 
   @@map("user_profiles")
+  @@index([supabaseUserId])
   @@index([steamId])
   @@index([subscriptionTier])
 }

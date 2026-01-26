@@ -23,7 +23,7 @@
 
 import { fetchSteamAppDetails, stripHtml, extractReleaseYear, fetchSteamReviewScore } from '../lib/steam-api';
 import { fetchSteamSpyData, createEnrichedMetadata } from '../lib/steamspy-api';
-import { generateGameEmbedding } from '../lib/embeddings';
+import { generateGameEmbeddingOpenAI } from '../lib/embeddings';
 import { prisma } from '../lib/prisma';
 import { Prisma } from '@prisma/client';
 
@@ -223,8 +223,8 @@ async function ingestSingleGame(appId: number): Promise<{
       median_playtime_hours: enriched.medianPlaytime,
     };
 
-    // Generate embedding
-    const embedding = await generateGameEmbedding({
+    // Generate embedding (1536-dim via OpenAI)
+    const embedding = await generateGameEmbeddingOpenAI({
       name: steamData.name,
       shortDescription: metadata.short_description,
       detailedDescription: metadata.detailed_description,

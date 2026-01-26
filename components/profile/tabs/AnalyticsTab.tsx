@@ -1,16 +1,73 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import UpgradeModal from '@/components/premium/UpgradeModal';
+
+interface GenreBreakdown {
+  genre: string;
+  percentage: number;
+  hours: number;
+}
+
+interface Insight {
+  icon: string;
+  label: string;
+  value: string;
+}
+
+interface AnalyticsSummary {
+  totalGames: number;
+  totalPlaytimeHours: number;
+  avgPlaytimeHours: number;
+  uniquenessScore: number;
+  genreCount: number;
+  deepDiveGames: number;
+}
+
+interface AnalyticsData {
+  genreBreakdown: GenreBreakdown[];
+  insights: Insight[];
+  summary: AnalyticsSummary;
+}
 
 interface AnalyticsTabProps {
   userId: string;
   gamesAnalyzed: number;
   totalPlaytimeHours?: number;
+  isPremium?: boolean;
 }
 
-export default function AnalyticsTab({ userId, gamesAnalyzed, totalPlaytimeHours }: AnalyticsTabProps) {
+export default function AnalyticsTab({ userId, gamesAnalyzed, totalPlaytimeHours, isPremium = false }: AnalyticsTabProps) {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch analytics data for premium users
+  useEffect(() => {
+    if (isPremium && userId) {
+      setIsLoading(true);
+      setError(null);
+
+      fetch(`/api/user/analytics?userId=${userId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            setAnalyticsData(data.analytics);
+          } else {
+            setError(data.error || 'Failed to load analytics');
+          }
+        })
+        .catch(err => {
+          console.error('Analytics fetch error:', err);
+          setError('Failed to load analytics');
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, [isPremium, userId]);
+
   // Mock analytics data for preview
   const mockGenreBreakdown = [
     { genre: 'Action', percentage: 32, hours: 245 },
@@ -21,12 +78,226 @@ export default function AnalyticsTab({ userId, gamesAnalyzed, totalPlaytimeHours
   ];
 
   const mockInsights = [
-    { icon: '🎮', label: 'Favorite Genre', value: 'Action RPG', locked: true },
-    { icon: '⏰', label: 'Peak Play Time', value: '9PM - 12AM', locked: true },
-    { icon: '📅', label: 'Most Active Day', value: 'Saturday', locked: true },
-    { icon: '🏆', label: 'Completion Rate', value: '34%', locked: true },
+    { icon: '🎮', label: 'Favorite Genre', value: 'Action RPG' },
+    { icon: '👑', label: 'Most Played', value: 'Counter-Strike 2' },
+    { icon: '🔥', label: 'Activity Level', value: 'Very Active' },
+    { icon: '🏆', label: 'Deep Dive Rate', value: '34%' },
   ];
 
+  // Use real data for premium users
+  const genreBreakdown = analyticsData?.genreBreakdown || mockGenreBreakdown;
+  const insights = analyticsData?.insights || mockInsights;
+  const summary = analyticsData?.summary;
+
+  // Premium user view
+  if (isPremium) {
+    if (isLoading) {
+      return (
+        <div className="space-y-6">
+          <div className="terminal-box rounded-lg overflow-hidden">
+            <div className="terminal-header">
+              <span className="text-gray-400 text-sm font-mono ml-16">ANALYTICS_PRO.exe</span>
+              <span className="text-neon-green text-xs font-mono ml-4">PREMIUM</span>
+            </div>
+            <div className="p-8 flex justify-center">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="relative w-12 h-12">
+                  <div className="absolute inset-0 border-4 border-neon-cyan/20 rounded-full" />
+                  <div className="absolute inset-0 border-4 border-transparent border-t-neon-cyan rounded-full animate-spin" />
+                </div>
+                <p className="text-neon-cyan font-mono text-sm">ANALYZING GAMING DATA...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="space-y-6">
+          <div className="terminal-box rounded-lg overflow-hidden">
+            <div className="terminal-header">
+              <span className="text-gray-400 text-sm font-mono ml-16">ANALYTICS_PRO.exe</span>
+            </div>
+            <div className="p-8 text-center">
+              <div className="text-red-400 font-mono mb-4">{error}</div>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-terminal-light border border-terminal-border rounded text-gray-400 hover:text-white font-mono text-sm"
+              >
+                RETRY
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        {/* Premium Stats Overview */}
+        <div className="terminal-box rounded-lg overflow-hidden">
+          <div className="terminal-header">
+            <span className="text-gray-400 text-sm font-mono ml-16">ANALYTICS_PRO.exe</span>
+            <span className="text-neon-green text-xs font-mono ml-4">PREMIUM</span>
+          </div>
+
+          <div className="p-6">
+            <h3 className="orbitron text-lg font-bold text-white mb-4">
+              Your Gaming Profile
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-terminal-dark p-4 rounded-lg border border-terminal-border text-center">
+                <div className="text-3xl font-bold text-neon-cyan orbitron mb-1">
+                  {summary?.totalGames || gamesAnalyzed}
+                </div>
+                <div className="text-xs text-gray-500 font-mono">GAMES IN LIBRARY</div>
+              </div>
+              <div className="bg-terminal-dark p-4 rounded-lg border border-terminal-border text-center">
+                <div className="text-3xl font-bold text-neon-green orbitron mb-1">
+                  {summary?.totalPlaytimeHours?.toLocaleString() || (totalPlaytimeHours ? Math.round(totalPlaytimeHours).toLocaleString() : '—')}
+                </div>
+                <div className="text-xs text-gray-500 font-mono">TOTAL HOURS</div>
+              </div>
+              <div className="bg-terminal-dark p-4 rounded-lg border border-terminal-border text-center">
+                <div className="text-3xl font-bold text-neon-orange orbitron mb-1">
+                  {summary?.avgPlaytimeHours || (totalPlaytimeHours && gamesAnalyzed ? Math.round(totalPlaytimeHours / gamesAnalyzed) : '—')}
+                </div>
+                <div className="text-xs text-gray-500 font-mono">AVG HOURS/GAME</div>
+              </div>
+              <div className="bg-terminal-dark p-4 rounded-lg border border-neon-cyan/30 text-center">
+                <div className="text-3xl font-bold text-neon-cyan orbitron mb-1">
+                  {summary?.uniquenessScore || 73}%
+                </div>
+                <div className="text-xs text-gray-500 font-mono">UNIQUE TASTE</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Analytics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Genre Breakdown */}
+          <div className="terminal-box rounded-lg overflow-hidden">
+            <div className="terminal-header">
+              <span className="text-gray-400 text-sm font-mono ml-16">GENRE_ANALYSIS.exe</span>
+            </div>
+
+            <div className="p-6">
+              <h3 className="orbitron text-lg font-bold text-white mb-4">
+                Genre Breakdown
+              </h3>
+              <div className="space-y-3">
+                {genreBreakdown.slice(0, 8).map((item, i) => (
+                  <div key={i}>
+                    <div className="flex justify-between text-sm font-mono mb-1">
+                      <span className="text-gray-400">{item.genre}</span>
+                      <span className="text-neon-cyan">{item.hours}h ({item.percentage}%)</span>
+                    </div>
+                    <div className="h-2 bg-terminal-dark rounded overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-neon-cyan to-neon-green transition-all duration-500"
+                        style={{ width: `${Math.min(item.percentage * 1.5, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {summary && (
+                <div className="mt-4 pt-4 border-t border-terminal-border">
+                  <p className="text-xs text-gray-500 font-mono">
+                    Played across <span className="text-neon-green">{summary.genreCount}</span> different genres
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Insights */}
+          <div className="terminal-box rounded-lg overflow-hidden">
+            <div className="terminal-header">
+              <span className="text-gray-400 text-sm font-mono ml-16">INSIGHTS.json</span>
+            </div>
+
+            <div className="p-6">
+              <h3 className="orbitron text-lg font-bold text-white mb-4">
+                Quick Insights
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                {insights.map((item, i) => (
+                  <div key={i} className="bg-terminal-dark p-4 rounded-lg border border-terminal-border hover:border-neon-cyan/50 transition-colors">
+                    <div className="text-2xl mb-2">{item.icon}</div>
+                    <div className="text-xs text-gray-500 font-mono mb-1">{item.label}</div>
+                    <div className="text-neon-cyan font-mono font-bold text-sm truncate" title={item.value}>
+                      {item.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Deep Dive Stats */}
+        {summary && (
+          <div className="terminal-box rounded-lg overflow-hidden">
+            <div className="terminal-header">
+              <span className="text-gray-400 text-sm font-mono ml-16">DEEP_DIVE.log</span>
+            </div>
+
+            <div className="p-6">
+              <h3 className="orbitron text-lg font-bold text-white mb-4">
+                Gaming Dedication
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-terminal-dark p-4 rounded-lg border border-terminal-border">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-2xl">🎯</span>
+                    <span className="text-xs text-gray-500 font-mono">DEEP DIVE GAMES</span>
+                  </div>
+                  <div className="text-2xl font-bold text-neon-green orbitron">
+                    {summary.deepDiveGames}
+                  </div>
+                  <div className="text-xs text-gray-500 font-mono mt-1">
+                    Games with 20+ hours played
+                  </div>
+                </div>
+
+                <div className="bg-terminal-dark p-4 rounded-lg border border-terminal-border">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-2xl">📊</span>
+                    <span className="text-xs text-gray-500 font-mono">DEDICATION RATE</span>
+                  </div>
+                  <div className="text-2xl font-bold text-neon-orange orbitron">
+                    {summary.totalGames > 0 ? Math.round((summary.deepDiveGames / summary.totalGames) * 100) : 0}%
+                  </div>
+                  <div className="text-xs text-gray-500 font-mono mt-1">
+                    Of your library deeply explored
+                  </div>
+                </div>
+
+                <div className="bg-terminal-dark p-4 rounded-lg border border-terminal-border">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-2xl">⚡</span>
+                    <span className="text-xs text-gray-500 font-mono">GENRE DIVERSITY</span>
+                  </div>
+                  <div className="text-2xl font-bold text-neon-cyan orbitron">
+                    {summary.genreCount}
+                  </div>
+                  <div className="text-xs text-gray-500 font-mono mt-1">
+                    Unique genres played
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Free user view (locked preview)
   return (
     <div className="space-y-6">
       {/* Premium Banner */}
@@ -91,7 +362,7 @@ export default function AnalyticsTab({ userId, gamesAnalyzed, totalPlaytimeHours
         {/* Genre Breakdown Preview */}
         <div className="terminal-box rounded-lg overflow-hidden relative">
           <div className="terminal-header">
-            <span className="text-gray-400 text-sm font-mono ml-16">GENRE_ANALYSIS.log</span>
+            <span className="text-gray-400 text-sm font-mono ml-16">GENRE_ANALYSIS.exe</span>
           </div>
 
           <div className="p-6 blur-sm pointer-events-none">

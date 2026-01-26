@@ -7,6 +7,7 @@ import {
   getSteamUserGameAchievements,
 } from '@/lib/steam-user-api';
 import { updateUserPreferenceVector, UserGameData } from '@/lib/user-preference-vector';
+import { createClient } from '@/lib/supabase/server';
 
 /**
  * POST /api/user/ingest
@@ -93,12 +94,40 @@ export async function POST(request: NextRequest) {
 
     console.log(`Found ${ownedGames.length} games in library`);
 
-    // Create or update user profile
-    const userProfile = await prisma.userProfile.upsert({
-      where: { steamId },
-      update: { steamId },
-      create: { steamId },
-    });
+    // Check for authenticated user
+    const supabase = await createClient();
+    const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+
+    let userProfile;
+
+    if (supabaseUser) {
+      // User is authenticated - link Steam to their existing profile
+      userProfile = await prisma.userProfile.findUnique({
+        where: { supabaseUserId: supabaseUser.id },
+      });
+
+      if (userProfile) {
+        // Update the existing profile with the Steam ID
+        userProfile = await prisma.userProfile.update({
+          where: { id: userProfile.id },
+          data: { steamId },
+        });
+      } else {
+        // Create new profile with both Supabase and Steam IDs
+        userProfile = await prisma.userProfile.create({
+          data: {
+            supabaseUserId: supabaseUser.id,
+            steamId,
+            email: supabaseUser.email,
+          },
+        });
+      }
+    } else {
+      // Legacy flow: unauthenticated user - create new profile each time
+      userProfile = await prisma.userProfile.create({
+        data: { steamId },
+      });
+    }
 
     const userId = userProfile.id;
 

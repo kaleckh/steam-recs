@@ -8,6 +8,8 @@ interface FilterControlsProps {
   isLoading?: boolean;
   currentFilters?: RecommendationFilters;
   compact?: boolean; // For search page use
+  isPremium?: boolean;
+  onUpgradeClick?: () => void;
 }
 
 export default function FilterControls({
@@ -15,6 +17,8 @@ export default function FilterControls({
   isLoading,
   currentFilters,
   compact = false,
+  isPremium = false,
+  onUpgradeClick,
 }: FilterControlsProps) {
   const [filters, setFilters] = useState<RecommendationFilters>(
     currentFilters || {
@@ -107,7 +111,25 @@ export default function FilterControls({
   // Full version for profile page
   return (
     <div className="w-full max-w-7xl mx-auto mb-6">
-      <div className="terminal-box rounded-lg p-5">
+      <div
+        className={`terminal-box rounded-lg p-5 relative ${!isPremium ? 'cursor-pointer' : ''}`}
+        onClick={!isPremium ? onUpgradeClick : undefined}
+      >
+        {/* Premium Lock Overlay */}
+        {!isPremium && (
+          <div className="absolute inset-0 bg-terminal-dark/80 backdrop-blur-sm rounded-lg z-10 flex items-center justify-center">
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-neon-orange" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <span className="font-mono text-sm text-gray-400">Advanced Filters</span>
+              <span className="px-2 py-1 text-[10px] bg-neon-orange/20 text-neon-orange border border-neon-orange/50 rounded font-mono">
+                PRO
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
           <svg
@@ -126,6 +148,11 @@ export default function FilterControls({
           <span className="text-sm font-mono text-gray-400 uppercase tracking-wider">
             Filters
           </span>
+          {!isPremium && (
+            <span className="px-1.5 py-0.5 text-[10px] bg-neon-orange/20 text-neon-orange border border-neon-orange/50 rounded">
+              PRO
+            </span>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

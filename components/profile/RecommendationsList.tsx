@@ -1,24 +1,88 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { GameRecommendation, getRecommendations } from '@/lib/api-client';
 import GameCard from './GameCard';
+
+type SortOption = 'relevance' | 'review_score' | 'metacritic' | 'newest' | 'oldest' | 'price_low' | 'price_high';
+
+const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+  { value: 'relevance', label: 'Relevance' },
+  { value: 'review_score', label: 'Review Score' },
+  { value: 'metacritic', label: 'Metacritic' },
+  { value: 'newest', label: 'Newest First' },
+  { value: 'oldest', label: 'Oldest First' },
+  { value: 'price_low', label: 'Price: Low to High' },
+  { value: 'price_high', label: 'Price: High to Low' },
+];
 
 interface RecommendationsListProps {
   recommendations: GameRecommendation[];
   userId?: string;
+  isPremium?: boolean;
+  onUpgradeClick?: () => void;
 }
 
 export default function RecommendationsList({
   recommendations: initialRecommendations,
   userId,
+  isPremium = false,
+  onUpgradeClick,
 }: RecommendationsListProps) {
   const [recommendations, setRecommendations] = useState<GameRecommendation[]>(initialRecommendations);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
+  const [sortBy, setSortBy] = useState<SortOption>('relevance');
+  const [genreFilter, setGenreFilter] = useState<string | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // Extract unique genres from recommendations
+  const availableGenres = useMemo(() => {
+    const genreSet = new Set<string>();
+    recommendations.forEach(game => {
+      game.genres?.forEach(genre => genreSet.add(genre));
+    });
+    return Array.from(genreSet).sort();
+  }, [recommendations]);
+
+  // Sort and filter recommendations
+  const sortedRecommendations = useMemo(() => {
+    let filtered = [...recommendations];
+
+    // Apply genre filter
+    if (genreFilter) {
+      filtered = filtered.filter(game => game.genres?.includes(genreFilter));
+    }
+
+    // Apply sorting
+    switch (sortBy) {
+      case 'review_score':
+        return filtered.sort((a, b) => (b.reviewScore ?? 0) - (a.reviewScore ?? 0));
+      case 'metacritic':
+        return filtered.sort((a, b) => (b.metacriticScore ?? 0) - (a.metacriticScore ?? 0));
+      case 'newest':
+        return filtered.sort((a, b) => (b.releaseYear ?? 0) - (a.releaseYear ?? 0));
+      case 'oldest':
+        return filtered.sort((a, b) => (a.releaseYear ?? 9999) - (b.releaseYear ?? 9999));
+      case 'price_low':
+        return filtered.sort((a, b) => {
+          const priceA = a.isFree ? 0 : (a.priceRaw ?? 9999999);
+          const priceB = b.isFree ? 0 : (b.priceRaw ?? 9999999);
+          return priceA - priceB;
+        });
+      case 'price_high':
+        return filtered.sort((a, b) => {
+          const priceA = a.isFree ? 0 : (a.priceRaw ?? 0);
+          const priceB = b.isFree ? 0 : (b.priceRaw ?? 0);
+          return priceB - priceA;
+        });
+      case 'relevance':
+      default:
+        return filtered.sort((a, b) => b.similarity - a.similarity);
+    }
+  }, [recommendations, sortBy, genreFilter]);
 
   useEffect(() => {
     setRecommendations(initialRecommendations);
@@ -117,11 +181,150 @@ export default function RecommendationsList({
     );
   }
 
+  // Show message when genre filter removes all results
+  if (sortedRecommendations.length === 0 && genreFilter) {
+    return (
+      <div className="w-full max-w-7xl mx-auto space-y-6">
+        {/* Sort & Filter Controls */}
+        <div className="flex flex-wrap items-center gap-4 terminal-box rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <label className="text-gray-500 font-mono text-xs uppercase tracking-wider">Sort:</label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="bg-terminal-dark border border-terminal-border rounded px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-neon-cyan transition-colors cursor-pointer"
+            >
+              {SORT_OPTIONS.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {availableGenres.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-gray-500 font-mono text-xs uppercase tracking-wider">Genre:</label>
+              <select
+                value={genreFilter || ''}
+                onChange={(e) => setGenreFilter(e.target.value || null)}
+                className="bg-terminal-dark border border-terminal-border rounded px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-neon-cyan transition-colors cursor-pointer"
+              >
+                <option value="">All Genres</option>
+                {availableGenres.map(genre => (
+                  <option key={genre} value={genre}>
+                    {genre}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="ml-auto">
+            <button
+              onClick={() => setGenreFilter(null)}
+              className="text-neon-orange hover:text-white transition-colors font-mono text-xs"
+            >
+              [clear filter]
+            </button>
+          </div>
+        </div>
+
+        <div className="terminal-box rounded-lg p-8 text-center">
+          <p className="text-gray-400 font-mono">
+            No games found with genre <span className="text-neon-cyan">&quot;{genreFilter}&quot;</span>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const handleSortChange = (value: SortOption) => {
+    if (!isPremium && value !== 'relevance') {
+      onUpgradeClick?.();
+      return;
+    }
+    setSortBy(value);
+  };
+
+  const handleGenreChange = (value: string | null) => {
+    if (!isPremium && value !== null) {
+      onUpgradeClick?.();
+      return;
+    }
+    setGenreFilter(value);
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6">
+      {/* Sort & Filter Controls */}
+      <div className="flex flex-wrap items-center gap-4 terminal-box rounded-lg p-4">
+        {/* Sort Dropdown */}
+        <div className="flex items-center gap-2">
+          <label className="text-gray-500 font-mono text-xs uppercase tracking-wider flex items-center gap-2">
+            Sort:
+            {!isPremium && (
+              <span className="px-1 py-0.5 text-[8px] bg-neon-orange/20 text-neon-orange border border-neon-orange/50 rounded">
+                PRO
+              </span>
+            )}
+          </label>
+          <select
+            value={sortBy}
+            onChange={(e) => handleSortChange(e.target.value as SortOption)}
+            className={`bg-terminal-dark border border-terminal-border rounded px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-neon-cyan transition-colors cursor-pointer ${!isPremium ? 'opacity-60' : ''}`}
+          >
+            {SORT_OPTIONS.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Genre Filter */}
+        {availableGenres.length > 0 && (
+          <div className="flex items-center gap-2">
+            <label className="text-gray-500 font-mono text-xs uppercase tracking-wider flex items-center gap-2">
+              Genre:
+              {!isPremium && (
+                <span className="px-1 py-0.5 text-[8px] bg-neon-orange/20 text-neon-orange border border-neon-orange/50 rounded">
+                  PRO
+                </span>
+              )}
+            </label>
+            <select
+              value={genreFilter || ''}
+              onChange={(e) => handleGenreChange(e.target.value || null)}
+              className={`bg-terminal-dark border border-terminal-border rounded px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-neon-cyan transition-colors cursor-pointer ${!isPremium ? 'opacity-60' : ''}`}
+            >
+              <option value="">All Genres</option>
+              {availableGenres.map(genre => (
+                <option key={genre} value={genre}>
+                  {genre}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Results count */}
+        <div className="ml-auto text-gray-500 font-mono text-xs">
+          <span className="text-neon-cyan">{sortedRecommendations.length}</span> games
+          {genreFilter && (
+            <button
+              onClick={() => setGenreFilter(null)}
+              className="ml-2 text-neon-orange hover:text-white transition-colors"
+            >
+              [clear filter]
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Recommendations Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {recommendations.map((game, index) => (
+        {sortedRecommendations.map((game, index) => (
           <div
             key={game.appId}
             className="opacity-0 animate-scale-in"
@@ -153,7 +356,7 @@ export default function RecommendationsList({
       )}
 
       {/* End of recommendations */}
-      {!hasMore && recommendations.length > 0 && (
+      {!hasMore && sortedRecommendations.length > 0 && (
         <div className="py-8 text-center">
           <div className="terminal-box rounded-lg p-6 inline-block">
             <p className="text-gray-500 font-mono text-sm">

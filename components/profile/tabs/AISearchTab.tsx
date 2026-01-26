@@ -69,15 +69,51 @@ interface SearchResponse {
 
 interface AISearchTabProps {
   userId?: string;
+  isPremium?: boolean;
 }
 
-export default function AISearchTab({ userId }: AISearchTabProps) {
+export default function AISearchTab({ userId, isPremium = false }: AISearchTabProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conversation, setConversation] = useState<ConversationData | null>(null);
   const [followUpInput, setFollowUpInput] = useState('');
+
+  // If not premium, show upgrade prompt instead of search
+  if (!isPremium) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="terminal-box rounded-lg overflow-hidden">
+          <div className="terminal-header">
+            <span className="text-gray-400 text-sm font-mono ml-16">AI_SEARCH.exe</span>
+          </div>
+          <div className="p-12 text-center">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-neon-orange/20 to-neon-cyan/20 border-2 border-neon-orange mb-6">
+              <svg className="w-10 h-10 text-neon-orange" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h2 className="orbitron text-2xl font-bold text-white mb-3">
+              AI SEARCH IS A PRO FEATURE
+            </h2>
+            <p className="text-gray-400 font-mono text-sm mb-6 max-w-md mx-auto">
+              Unlock natural language game search powered by AI. Describe exactly what you&apos;re looking for and find your perfect match.
+            </p>
+            <Link
+              href="/profile?tab=analytics"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-neon-orange/20 to-neon-cyan/20 border border-neon-orange text-neon-orange hover:bg-neon-orange hover:text-black transition-all rounded-lg font-mono text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              UPGRADE TO PRO
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
   const [loadingWordIndex, setLoadingWordIndex] = useState(0);
   const [hasSearched, setHasSearched] = useState(false);
 

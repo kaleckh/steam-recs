@@ -1,10 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { GameRecommendation, RecommendationFilters } from '@/lib/api-client';
 import FilterControls from '@/components/profile/FilterControls';
 import RecommendationsList from '@/components/profile/RecommendationsList';
 import AlgorithmAccuracy from '@/components/profile/AlgorithmAccuracy';
+import UpgradeModal from '@/components/premium/UpgradeModal';
 
 interface ForYouTabProps {
   userId: string;
@@ -14,6 +16,7 @@ interface ForYouTabProps {
   filters: RecommendationFilters;
   onFilterChange: (filters: RecommendationFilters) => void;
   isApplyingFilters: boolean;
+  isPremium?: boolean;
 }
 
 export default function ForYouTab({
@@ -24,13 +27,24 @@ export default function ForYouTab({
   filters,
   onFilterChange,
   isApplyingFilters,
+  isPremium = false,
 }: ForYouTabProps) {
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+
+  const handleAISearchClick = (e: React.MouseEvent) => {
+    if (!isPremium) {
+      e.preventDefault();
+      setIsUpgradeModalOpen(true);
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* AI Search CTA */}
       <Link
         href="/profile?tab=ai-search"
-        className="block terminal-box rounded-lg overflow-hidden group hover:border-neon-cyan transition-all"
+        onClick={handleAISearchClick}
+        className="block terminal-box rounded-lg overflow-hidden group hover:border-neon-cyan transition-all relative"
       >
         <div className="p-8 bg-gradient-to-r from-neon-cyan/5 via-transparent to-neon-orange/5">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -41,17 +55,22 @@ export default function ForYouTab({
                 </svg>
               </div>
               <div>
-                <h2 className="orbitron text-2xl md:text-3xl font-black text-white mb-2 group-hover:text-neon-cyan transition-colors">
-                  PROMPT YOUR PREFERENCE
+                <h2 className="orbitron text-2xl md:text-3xl font-black text-white mb-2 group-hover:text-neon-cyan transition-colors flex items-center gap-3">
+                  FIND YOUR NEXT GAME
+                  {!isPremium && (
+                    <span className="px-2 py-1 text-[10px] bg-neon-orange/20 text-neon-orange border border-neon-orange/50 rounded">
+                      PRO
+                    </span>
+                  )}
                 </h2>
                 <p className="text-gray-400 font-mono text-sm md:text-base">
-                  Describe your perfect game in plain English and let AI find it for you
+                  Describe what you&apos;re in the mood for and let AI search the catalog
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <span className="px-4 py-2 bg-neon-cyan/20 border border-neon-cyan text-neon-cyan font-mono text-sm rounded-lg group-hover:bg-neon-cyan group-hover:text-black transition-all">
-                TRY AI SEARCH
+                SEARCH NOW
               </span>
               <svg className="w-6 h-6 text-neon-cyan group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -66,6 +85,8 @@ export default function ForYouTab({
         onFilterChange={onFilterChange}
         isLoading={isApplyingFilters}
         currentFilters={filters}
+        isPremium={isPremium}
+        onUpgradeClick={() => setIsUpgradeModalOpen(true)}
       />
 
       {/* Loading Spinner for Filter Changes */}
@@ -86,6 +107,8 @@ export default function ForYouTab({
         <RecommendationsList
           recommendations={recommendations}
           userId={userId}
+          isPremium={isPremium}
+          onUpgradeClick={() => setIsUpgradeModalOpen(true)}
         />
       )}
 
@@ -99,6 +122,13 @@ export default function ForYouTab({
           />
         </div>
       </div>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        userId={userId}
+      />
     </div>
   );
 }
