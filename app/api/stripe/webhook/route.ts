@@ -36,8 +36,9 @@ export async function POST(request: NextRequest) {
 
         if (subscriptionId) {
           const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
-          // Stripe types don't expose current_period_end directly, access via any
-          const periodEnd = (subscription as unknown as { current_period_end: number }).current_period_end;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const periodEnd = (subscription as any).current_period_end as number | undefined;
+          console.log('Subscription period end:', periodEnd, typeof periodEnd);
 
           // Try to find user by ID first, then fall back to email
           let userProfile = userId
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
               data: {
                 subscriptionTier: 'premium',
                 stripeSubscriptionId: subscriptionId,
-                subscriptionExpiresAt: new Date(periodEnd * 1000),
+                ...(periodEnd && { subscriptionExpiresAt: new Date(periodEnd * 1000) }),
                 ...(customerEmail && { email: customerEmail }),
               },
             });
@@ -71,13 +72,14 @@ export async function POST(request: NextRequest) {
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
-        const periodEnd = (subscription as unknown as { current_period_end: number }).current_period_end;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const periodEnd = (subscription as any).current_period_end as number | undefined;
 
         await prisma.userProfile.updateMany({
           where: { stripeSubscriptionId: subscription.id },
           data: {
             subscriptionTier: subscription.status === 'active' ? 'premium' : 'free',
-            subscriptionExpiresAt: new Date(periodEnd * 1000),
+            ...(periodEnd && { subscriptionExpiresAt: new Date(periodEnd * 1000) }),
           },
         });
         break;
