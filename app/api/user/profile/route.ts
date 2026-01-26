@@ -90,6 +90,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ profile });
   } catch (error) {
     console.error('Profile fetch error:', error);
-    return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 });
+    // Return more details in development, generic message in production
+    const errorMessage = process.env.NODE_ENV === 'development'
+      ? `Failed to fetch profile: ${error instanceof Error ? error.message : String(error)}`
+      : 'Failed to fetch profile';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
