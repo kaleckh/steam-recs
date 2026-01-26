@@ -166,9 +166,10 @@ function ProfileContent() {
 
     // Auth is done loading - check if we have a profile
     if (!profile) {
-      // If we have a user but no profile, try to refresh
+      // If we have a user but no profile, show the link steam form
+      // This handles the case where profile creation failed or was deleted
       if (user) {
-        setState({ stage: 'error', error: 'Failed to load your profile. Please click retry or refresh the page.' });
+        setState({ stage: 'link_steam' });
       } else {
         // No user means they need to log in - redirect handled by middleware
         setState({ stage: 'loading' });
@@ -186,7 +187,8 @@ function ProfileContent() {
   }, [authLoading, profile, user, loadRecommendations]);
 
   const handleLinkSteam = async (steamInput: string) => {
-    if (!profile?.id) return;
+    // Allow linking even without existing profile - ingest API will create one
+    if (!user) return;
 
     setState({ stage: 'ingesting', steamInput });
 
