@@ -23,7 +23,7 @@
 import { prisma } from '../lib/prisma';
 import { fetchSteamSpyData, createEnrichedMetadata } from '../lib/steamspy-api';
 import { fetchSteamReviewScore } from '../lib/steam-api';
-import { generateGameEmbedding } from '../lib/embeddings';
+import { generateGameEmbeddingOpenAI } from '../lib/embeddings';
 import { Prisma } from '@prisma/client';
 
 interface MigrationOptions {
@@ -197,7 +197,7 @@ async function updateGame(game: GameToUpdate, dryRun: boolean): Promise<UpdateRe
     const contentDescriptors = metadata.content_descriptors?.notes as string | undefined;
 
     // Regenerate embedding WITH TAGS
-    const embedding = await generateGameEmbedding({
+    const embedding = await generateGameEmbeddingOpenAI({
       name: game.name,
       shortDescription: shortDesc,
       detailedDescription: detailedDesc,

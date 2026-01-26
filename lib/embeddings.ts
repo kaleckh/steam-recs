@@ -1,4 +1,3 @@
-import { pipeline, FeatureExtractionPipeline } from '@xenova/transformers';
 import OpenAI from 'openai';
 
 // OpenAI client for embeddings (lazy-loaded to allow env vars to be set first)
@@ -10,44 +9,6 @@ function getOpenAI(): OpenAI {
     });
   }
   return openai;
-}
-
-// Singleton pattern for the transformer model (legacy)
-let embeddingPipeline: FeatureExtractionPipeline | null = null;
-let initializationPromise: Promise<FeatureExtractionPipeline> | null = null;
-
-/**
- * Initialize the embedding model (lazy loaded).
- * Uses all-MiniLM-L6-v2 which produces 384-dimensional embeddings.
- */
-async function getEmbeddingPipeline(): Promise<FeatureExtractionPipeline> {
-  if (embeddingPipeline) {
-    return embeddingPipeline;
-  }
-
-  // If initialization is in progress, wait for it
-  if (initializationPromise) {
-    return initializationPromise;
-  }
-
-  // Start initialization
-  initializationPromise = (async () => {
-    try {
-      console.log('Loading embedding model: Xenova/all-MiniLM-L6-v2...');
-      const pipe = await pipeline(
-        'feature-extraction',
-        'Xenova/all-MiniLM-L6-v2'
-      );
-      embeddingPipeline = pipe;
-      console.log('Embedding model loaded successfully');
-      return pipe;
-    } catch (error) {
-      initializationPromise = null; // Reset on error so it can be retried
-      throw new Error(`Failed to load embedding model: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  })();
-
-  return initializationPromise;
 }
 
 /**
@@ -244,32 +205,6 @@ export function createEmbeddingText(params: {
 }
 
 /**
- * Generate a 384-dimensional embedding vector for the given text using MiniLM (legacy).
- * @param text - The text to embed
- * @returns Array of 384 numbers representing the embedding
- * @deprecated Use generateOpenAIEmbedding for better semantic understanding
- */
-export async function generateEmbedding(text: string): Promise<number[]> {
-  try {
-    const pipe = await getEmbeddingPipeline();
-
-    // Generate embedding
-    const output = await pipe(text, { pooling: 'mean', normalize: true });
-
-    // Extract the embedding array
-    const embedding = Array.from(output.data as Float32Array);
-
-    if (embedding.length !== 384) {
-      throw new Error(`Expected 384-dimensional embedding, got ${embedding.length}`);
-    }
-
-    return embedding;
-  } catch (error) {
-    throw new Error(`Embedding generation failed: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-/**
  * Generate a 1536-dimensional embedding vector using OpenAI's text-embedding-3-small.
  *
  * This model has MUCH better semantic understanding than MiniLM:
@@ -327,40 +262,6 @@ export async function generateOpenAIEmbeddingsBatch(texts: string[]): Promise<nu
 }
 
 /**
- * Generate embedding from comprehensive game metadata using MiniLM (legacy).
- *
- * @param params - Comprehensive game metadata
- * @returns 384-dimensional embedding vector (MiniLM-L6-v2)
- * @deprecated Use generateGameEmbeddingOpenAI for better semantic understanding
- */
-export async function generateGameEmbedding(params: {
-  name: string;
-  shortDescription?: string;
-  detailedDescription?: string;
-  aboutTheGame?: string;
-  genres?: string[];
-  categories?: string[];
-  developers?: string[];
-  publishers?: string[];
-  releaseYear?: number;
-  reviewCount?: number;
-  reviewPositivePct?: number; // 0-100
-  metacriticScore?: number; // 0-100
-  isFree?: boolean;
-  tags?: string[]; // User-generated tags (from Steam Spy if available)
-  contentDescriptors?: string; // Content warnings/themes
-}): Promise<number[]> {
-  const text = createEmbeddingText(params);
-
-  // Log embedding text length for monitoring
-  if (text.length > 2000) {
-    console.warn(`Embedding text for "${params.name}" is ${text.length} chars (may be truncated)`);
-  }
-
-  return generateEmbedding(text);
-}
-
-/**
  * Generate embedding from comprehensive game metadata using OpenAI.
  *
  * This is the RECOMMENDED function for game embeddings:
@@ -392,10 +293,3 @@ export async function generateGameEmbeddingOpenAI(params: {
   return generateOpenAIEmbedding(text);
 }
 
-/**
- * Preload the embedding model (optional, for warming up).
- * Call this on server startup to avoid first-request latency.
- */
-export async function preloadEmbeddingModel(): Promise<void> {
-  await getEmbeddingPipeline();
-}

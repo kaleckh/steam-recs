@@ -1,4 +1,4 @@
-import { generateEmbedding } from '../lib/embeddings';
+import { generateOpenAIEmbedding } from '../lib/embeddings';
 import { prisma } from '../lib/prisma';
 
 async function testSimilarity() {
@@ -8,7 +8,7 @@ async function testSimilarity() {
   console.log('Query:', query);
   console.log('\nGenerating embedding...');
 
-  const queryEmbedding = await generateEmbedding(query);
+  const queryEmbedding = await generateOpenAIEmbedding(query);
   const vectorString = `[${queryEmbedding.join(',')}]`;
 
   console.log('Searching for similar games...\n');

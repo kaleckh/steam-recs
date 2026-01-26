@@ -17,7 +17,7 @@
 
 import { fetchSteamAppDetails, stripHtml, extractReleaseYear, fetchSteamReviewScore } from '../lib/steam-api';
 import { fetchSteamSpyData, createEnrichedMetadata } from '../lib/steamspy-api';
-import { generateGameEmbedding } from '../lib/embeddings';
+import { generateGameEmbeddingOpenAI } from '../lib/embeddings';
 import { prisma } from '../lib/prisma';
 import { Prisma } from '@prisma/client';
 
@@ -182,7 +182,7 @@ async function ingestSingleGame(appId: number): Promise<{
     };
 
     // Generate embedding
-    const embedding = await generateGameEmbedding({
+    const embedding = await generateGameEmbeddingOpenAI({
       name: steamData.name,
       shortDescription: metadata.short_description,
       detailedDescription: metadata.detailed_description,

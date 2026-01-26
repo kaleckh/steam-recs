@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { generateGameEmbedding } from '@/lib/embeddings';
+import { generateGameEmbeddingOpenAI } from '@/lib/embeddings';
 import { Prisma } from '@prisma/client';
 import {
   fetchSteamAppDetails,
@@ -182,7 +182,7 @@ async function ingestGame(game: GameIngestRequest, fetchFromSteam = true) {
   const contentDescriptors = gameMetadata.content_descriptors?.notes as string | undefined;
 
   // Generate embedding with comprehensive metadata INCLUDING TAGS (critical!)
-  const embedding = await generateGameEmbedding({
+  const embedding = await generateGameEmbeddingOpenAI({
     name: gameName,
     shortDescription: shortDesc,
     detailedDescription: detailedDesc || description,
