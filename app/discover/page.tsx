@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
@@ -123,14 +123,13 @@ const DISCOVERY_CATEGORIES: DiscoveryCategory[] = [
   },
 ];
 
-export default function DiscoverPage() {
+function DiscoverContent() {
   const searchParams = useSearchParams();
   const userIdParam = searchParams.get('userId');
 
   const [userId, setUserId] = useState<string | null>(null);
   const [categoryGames, setCategoryGames] = useState<Record<string, GameRecommendation[]>>({});
   const [loadingCategories, setLoadingCategories] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
 
   // Load userId from URL param or localStorage
   useEffect(() => {
@@ -268,5 +267,32 @@ export default function DiscoverPage() {
         </div>
       </div>
     </>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <>
+      <AnimatedBackground />
+      <div className="min-h-screen relative">
+        <div className="pt-24 pb-8 px-4 md:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="terminal-box rounded-lg overflow-hidden p-12">
+              <div className="flex justify-center">
+                <div className="w-8 h-8 border-2 border-neon-cyan/30 border-t-neon-cyan rounded-full animate-spin" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+export default function DiscoverPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <DiscoverContent />
+    </Suspense>
   );
 }

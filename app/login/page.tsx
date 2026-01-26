@@ -18,6 +18,9 @@ function LoginContent() {
   const redirect = searchParams.get('redirect') || '/profile';
   const supabase = createClient();
 
+  // Get the site URL - prefer env var for production, fallback to window.location.origin
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+
   // Check for pending search and redirect appropriately
   const getRedirectUrl = () => {
     if (typeof window !== 'undefined') {
@@ -64,7 +67,7 @@ function LoginContent() {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${redirect}`,
+          emailRedirectTo: `${siteUrl}/auth/callback?redirect=${redirect}`,
         },
       });
 
@@ -88,7 +91,7 @@ function LoginContent() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?redirect=${redirect}`,
+          redirectTo: `${siteUrl}/auth/callback?redirect=${redirect}`,
         },
       });
 
@@ -115,7 +118,7 @@ function LoginContent() {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+        redirectTo: `${siteUrl}/auth/callback?type=recovery`,
       });
 
       if (error) {
