@@ -30,22 +30,41 @@ export async function POST(request: NextRequest) {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.userId;
         const subscriptionId = session.subscription as string;
+        const customerEmail = session.customer_details?.email;
 
-        if (userId && subscriptionId) {
+        console.log('Checkout completed:', { userId, subscriptionId, customerEmail });
+
+        if (subscriptionId) {
           const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
-          const customerEmail = session.customer_details?.email;
           // Stripe types don't expose current_period_end directly, access via any
           const periodEnd = (subscription as unknown as { current_period_end: number }).current_period_end;
 
-          await prisma.userProfile.update({
-            where: { id: userId },
-            data: {
-              subscriptionTier: 'premium',
-              stripeSubscriptionId: subscriptionId,
-              subscriptionExpiresAt: new Date(periodEnd * 1000),
-              ...(customerEmail && { email: customerEmail }),
-            },
-          });
+          // Try to find user by ID first, then fall back to email
+          let userProfile = userId
+            ? await prisma.userProfile.findUnique({ where: { id: userId } })
+            : null;
+
+          // If user ID not found, try by email (handles profile recreation)
+          if (!userProfile && customerEmail) {
+            console.log('User not found by ID, trying email:', customerEmail);
+            userProfile = await prisma.userProfile.findUnique({ where: { email: customerEmail } });
+          }
+
+          if (userProfile) {
+            console.log('Updating user profile:', userProfile.id);
+            await prisma.userProfile.update({
+              where: { id: userProfile.id },
+              data: {
+                subscriptionTier: 'premium',
+                stripeSubscriptionId: subscriptionId,
+                subscriptionExpiresAt: new Date(periodEnd * 1000),
+                ...(customerEmail && { email: customerEmail }),
+              },
+            });
+            console.log('User upgraded to premium successfully');
+          } else {
+            console.error('No user profile found for checkout:', { userId, customerEmail });
+          }
         }
         break;
       }
@@ -96,7 +115,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error('Webhook handler error:', error);
-    return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error('Webhook handler error:', { message: errorMessage, stack: errorStack, eventType: event.type });
+    return NextResponse.json({ error: 'Webhook handler failed', details: errorMessage }, { status: 500 });
   }
 }
