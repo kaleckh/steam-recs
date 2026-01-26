@@ -16,6 +16,7 @@ import ForYouTab from '@/components/profile/tabs/ForYouTab';
 import AISearchTab from '@/components/profile/tabs/AISearchTab';
 import AnalyticsTab from '@/components/profile/tabs/AnalyticsTab';
 import LibraryTab from '@/components/profile/tabs/LibraryTab';
+import UpgradeModal from '@/components/premium/UpgradeModal';
 import { useAuth } from '@/contexts/AuthContext';
 
 type ProfileState =
@@ -53,6 +54,7 @@ export default function ProfilePage() {
   }>>([]);
   const [username, setUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   // Get active tab from URL params
   const tabParam = searchParams.get('tab');
@@ -404,13 +406,18 @@ export default function ProfilePage() {
 
                       {/* Resync Button */}
                       <button
-                        onClick={handleResync}
+                        onClick={() => isPremium ? handleResync() : setIsUpgradeModalOpen(true)}
                         className="btn-arcade rounded-lg flex items-center gap-3"
                       >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
                         RESYNC
+                        {!isPremium && (
+                          <span className="px-1.5 py-0.5 text-[8px] bg-neon-orange/20 text-neon-orange border border-neon-orange/50 rounded">
+                            PRO
+                          </span>
+                        )}
                       </button>
                     </div>
 
@@ -494,6 +501,15 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
+
+      {/* Upgrade Modal */}
+      {profile && (
+        <UpgradeModal
+          isOpen={isUpgradeModalOpen}
+          onClose={() => setIsUpgradeModalOpen(false)}
+          userId={profile.id}
+        />
+      )}
     </div>
   );
 }

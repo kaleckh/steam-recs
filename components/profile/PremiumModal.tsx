@@ -1,5 +1,8 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+
 interface PremiumModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -11,15 +14,33 @@ export default function PremiumModal({
   onClose,
   onUpgrade,
 }: PremiumModalProps) {
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
 
-  return (
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !mounted) return null;
+
+  const modalContent = (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl max-w-2xl w-full p-8 shadow-2xl transform transition-all"
+        className="bg-white rounded-2xl max-w-2xl w-full p-8 shadow-2xl transform transition-all max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -68,7 +89,7 @@ export default function PremiumModal({
                 Thumbs Up/Down Feedback
               </h3>
               <p className="text-sm text-gray-600">
-                Rate every recommendation with ❤️ Love, 👍 Like, 👎 Dislike, or 🚫 Never Show
+                Rate every recommendation with Love, Like, Dislike, or Never Show
               </p>
             </div>
           </div>
@@ -135,10 +156,10 @@ export default function PremiumModal({
             </div>
             <div>
               <h3 className="font-semibold text-gray-900">
-                "Never Show Me This" List
+                &quot;Never Show Me This&quot; List
               </h3>
               <p className="text-sm text-gray-600">
-                Permanently exclude games, genres, or franchises you don't like
+                Permanently exclude games, genres, or franchises you don&apos;t like
               </p>
             </div>
           </div>
@@ -170,8 +191,8 @@ export default function PremiumModal({
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <h4 className="font-semibold text-blue-900 mb-2">Example:</h4>
           <p className="text-sm text-blue-800">
-            "I love Total War mechanics but not Warhammer fantasy" → 👍 Like Civilization,
-            Crusader Kings, 👎 Dislike Warhammer games → AI learns to recommend grand strategy
+            &quot;I love Total War mechanics but not Warhammer fantasy&quot; → Like Civilization,
+            Crusader Kings, Dislike Warhammer games → AI learns to recommend grand strategy
             games without fantasy settings
           </p>
         </div>
@@ -213,4 +234,7 @@ export default function PremiumModal({
       </div>
     </div>
   );
+
+  // Use portal to render modal at document body level
+  return createPortal(modalContent, document.body);
 }

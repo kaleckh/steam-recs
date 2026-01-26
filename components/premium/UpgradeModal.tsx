@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { PLANS } from '@/lib/plans';
 
 interface UpgradeModalProps {
@@ -12,8 +13,25 @@ interface UpgradeModalProps {
 export default function UpgradeModal({ isOpen, onClose, userId }: UpgradeModalProps) {
   const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('monthly');
   const [isLoading, setIsLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !mounted) return null;
 
   const handleUpgrade = async () => {
     setIsLoading(true);
@@ -41,8 +59,8 @@ export default function UpgradeModal({ isOpen, onClose, userId }: UpgradeModalPr
 
   const yearlyDiscount = Math.round((1 - (PLANS.premium.yearlyPrice / (PLANS.premium.monthlyPrice * 12))) * 100);
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center">
+  const modalContent = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
@@ -50,9 +68,9 @@ export default function UpgradeModal({ isOpen, onClose, userId }: UpgradeModalPr
       />
 
       {/* Modal */}
-      <div className="relative terminal-box rounded-lg max-w-lg w-full mx-4 overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div className="relative terminal-box rounded-lg max-w-lg w-full mx-4 overflow-hidden animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="terminal-header">
+        <div className="terminal-header sticky top-0 z-10">
           <span className="text-gray-400 text-sm font-mono ml-16">UPGRADE_TO_PRO.exe</span>
           <button
             onClick={onClose}
@@ -154,4 +172,7 @@ export default function UpgradeModal({ isOpen, onClose, userId }: UpgradeModalPr
       </div>
     </div>
   );
+
+  // Use portal to render modal at document body level
+  return createPortal(modalContent, document.body);
 }
