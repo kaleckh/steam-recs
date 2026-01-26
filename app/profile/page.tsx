@@ -36,7 +36,7 @@ type ProfileState =
 function ProfileContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, profile, isPremium, isLoading: authLoading, refreshProfile, cachedRecommendations, setCachedRecommendations } = useAuth();
+  const { user, profile, isPremium, isLoading: authLoading, refreshProfile, cachedRecommendations, setCachedRecommendations, signOut } = useAuth();
 
   const [state, setState] = useState<ProfileState>({ stage: 'loading' });
   const [filters, setFilters] = useState<RecommendationFilters>({
@@ -415,7 +415,21 @@ function ProfileContent() {
 
         {/* Error State */}
         {state.stage === 'error' && (
-          <ErrorDisplay error={state.error} onRetry={handleRetry} />
+          <div className="space-y-4">
+            <ErrorDisplay error={state.error} onRetry={handleRetry} />
+            {/* Always show sign out option in error state */}
+            <div className="text-center">
+              <p className="text-gray-500 text-sm font-mono mb-3">
+                If the problem persists, try signing out:
+              </p>
+              <button
+                onClick={signOut}
+                className="px-6 py-3 bg-red-500/20 border border-red-500/50 text-red-400 rounded-lg font-mono text-sm hover:bg-red-500/30 transition-colors"
+              >
+                SIGN OUT
+              </button>
+            </div>
+          </div>
         )}
 
         {/* Recommendations */}

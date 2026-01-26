@@ -50,7 +50,7 @@ export default function GameTabs({ game }: GameTabsProps) {
 
       {/* Tab Content */}
       <div className="p-6">
-        {activeTab === 'videos' && <VideosTab game={game} />}
+        {activeTab === 'videos' && <VideosTab game={game} autoPlay />}
         {activeTab === 'screenshots' && <ScreenshotsTab game={game} />}
         {activeTab === 'stats' && <StatsTab game={game} />}
       </div>

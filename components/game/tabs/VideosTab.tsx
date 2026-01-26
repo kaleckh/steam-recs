@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { GameDetail } from '@/app/game/[appId]/page';
 
 interface VideosTabProps {
   game: GameDetail;
+  autoPlay?: boolean;
 }
 
 interface YouTubeVideo {
@@ -15,10 +16,29 @@ interface YouTubeVideo {
   publishedAt: string;
 }
 
-export default function VideosTab({ game }: VideosTabProps) {
+interface SteamMovie {
+  id: number;
+  name: string;
+  thumbnail: string;
+  webm?: { 480: string; max: string };
+  mp4?: { 480: string; max: string };
+}
+
+export default function VideosTab({ game, autoPlay = false }: VideosTabProps) {
   const [youtubeVideos, setYoutubeVideos] = useState<YouTubeVideo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [selectedSteamVideo, setSelectedSteamVideo] = useState<SteamMovie | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const steamTrailers = game.movies || [];
+
+  // Auto-play first Steam video on mount
+  useEffect(() => {
+    if (autoPlay && steamTrailers.length > 0 && !selectedSteamVideo) {
+      setSelectedSteamVideo(steamTrailers[0]);
+    }
+  }, [autoPlay, steamTrailers, selectedSteamVideo]);
 
   useEffect(() => {
     async function fetchYouTubeVideos() {
@@ -40,9 +60,6 @@ export default function VideosTab({ game }: VideosTabProps) {
     fetchYouTubeVideos();
   }, [game.name]);
 
-  // Steam trailers first
-  const steamTrailers = game.movies || [];
-
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -59,8 +76,30 @@ export default function VideosTab({ game }: VideosTabProps) {
 
   return (
     <div className="space-y-8">
-      {/* Selected Video Player */}
-      {selectedVideo && (
+      {/* Steam Video Player */}
+      {selectedSteamVideo && (
+        <div className="relative aspect-video rounded-lg overflow-hidden shadow-2xl mb-8 bg-black">
+          <video
+            ref={videoRef}
+            src={selectedSteamVideo.mp4?.max || selectedSteamVideo.mp4?.['480'] || selectedSteamVideo.webm?.max || selectedSteamVideo.webm?.['480']}
+            controls
+            autoPlay
+            className="w-full h-full"
+          />
+          <button
+            onClick={() => setSelectedSteamVideo(null)}
+            className="absolute top-4 right-4 bg-black/80 hover:bg-black text-white px-4 py-2 rounded-lg transition-colors z-10"
+          >
+            Close
+          </button>
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4 pointer-events-none">
+            <p className="text-white font-medium">{selectedSteamVideo.name}</p>
+          </div>
+        </div>
+      )}
+
+      {/* YouTube Video Player */}
+      {selectedVideo && !selectedSteamVideo && (
         <div className="relative aspect-video rounded-lg overflow-hidden shadow-2xl mb-8">
           <iframe
             src={`https://www.youtube.com/embed/${selectedVideo}?autoplay=1`}
@@ -88,7 +127,13 @@ export default function VideosTab({ game }: VideosTabProps) {
             {steamTrailers.map((trailer) => (
               <div
                 key={trailer.id}
-                className="group relative cursor-pointer rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+                onClick={() => {
+                  setSelectedVideo(null);
+                  setSelectedSteamVideo(trailer);
+                }}
+                className={`group relative cursor-pointer rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 ${
+                  selectedSteamVideo?.id === trailer.id ? 'ring-2 ring-neon-cyan' : ''
+                }`}
               >
                 <img
                   src={trailer.thumbnail}
@@ -126,7 +171,10 @@ export default function VideosTab({ game }: VideosTabProps) {
             {youtubeVideos.map((video) => (
               <div
                 key={video.id}
-                onClick={() => setSelectedVideo(video.id)}
+                onClick={() => {
+                  setSelectedSteamVideo(null);
+                  setSelectedVideo(video.id);
+                }}
                 className="group relative cursor-pointer rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
               >
                 <img
