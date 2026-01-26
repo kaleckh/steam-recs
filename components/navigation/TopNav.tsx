@@ -43,8 +43,26 @@ export default function TopNav() {
             STEAM RECS
           </Link>
 
-          {/* Desktop Profile Tabs - Hidden on mobile */}
+          {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center gap-1">
+            {/* Discover Link */}
+            <Link
+              href="/discover"
+              className={`px-4 py-2 rounded font-mono text-sm transition-all flex items-center gap-2 ${
+                pathname === '/discover'
+                  ? 'bg-neon-orange/20 text-neon-orange border border-neon-orange'
+                  : 'text-gray-400 hover:text-white hover:bg-terminal-light border border-transparent'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              DISCOVER
+            </Link>
+
+            <div className="w-px h-6 bg-terminal-border mx-2" />
+
+            {/* Profile Tabs */}
             {TABS.map((tab) => {
               const isActive = isProfilePage && currentTab === tab.id;
               return (
@@ -214,6 +232,22 @@ export default function TopNav() {
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div className="lg:hidden mt-4 pb-2 border-t border-terminal-border pt-4">
+            {/* Discover Link - Full Width */}
+            <Link
+              href="/discover"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`mb-3 px-3 py-2.5 rounded font-mono text-sm text-center transition-all flex items-center justify-center gap-2 ${
+                pathname === '/discover'
+                  ? 'bg-neon-orange/20 text-neon-orange border border-neon-orange'
+                  : 'text-gray-400 hover:text-white bg-terminal-light border border-terminal-border'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              DISCOVER GAMES
+            </Link>
+
             <div className="grid grid-cols-2 gap-2">
               {TABS.map((tab) => {
                 const isActive = isProfilePage && currentTab === tab.id;
