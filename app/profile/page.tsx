@@ -17,7 +17,7 @@ import AISearchTab from '@/components/profile/tabs/AISearchTab';
 import AnalyticsTab from '@/components/profile/tabs/AnalyticsTab';
 import LibraryTab from '@/components/profile/tabs/LibraryTab';
 import UpgradeModal from '@/components/premium/UpgradeModal';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, CachedRecommendations } from '@/contexts/AuthContext';
 
 type ProfileState =
   | { stage: 'loading' }
@@ -36,7 +36,7 @@ type ProfileState =
 function ProfileContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, profile, isPremium, isLoading: authLoading, refreshProfile } = useAuth();
+  const { user, profile, isPremium, isLoading: authLoading, refreshProfile, cachedRecommendations, setCachedRecommendations } = useAuth();
 
   const [state, setState] = useState<ProfileState>({ stage: 'loading' });
   const [filters, setFilters] = useState<RecommendationFilters>({
@@ -77,8 +77,26 @@ function ProfileContent() {
     }
   }, []);
 
-  const loadRecommendations = useCallback(async () => {
+  const loadRecommendations = useCallback(async (forceRefresh = false) => {
     if (!profile?.id) return;
+
+    // Use cached data if available and not forcing refresh
+    if (!forceRefresh && cachedRecommendations) {
+      if (cachedRecommendations.topGames) {
+        setTopGames(cachedRecommendations.topGames as typeof topGames);
+      }
+      if (cachedRecommendations.ratingsCount !== undefined) {
+        setRatingsCount(cachedRecommendations.ratingsCount);
+      }
+      setState({
+        stage: 'recommendations',
+        recommendations: cachedRecommendations.recommendations as GameRecommendation[],
+        gamesAnalyzed: cachedRecommendations.gamesAnalyzed,
+        totalPlaytimeHours: cachedRecommendations.totalPlaytimeHours,
+        lastUpdated: cachedRecommendations.lastUpdated,
+      });
+      return;
+    }
 
     setState({ stage: 'loading_recommendations' });
 
@@ -98,6 +116,16 @@ function ProfileContent() {
       }
 
       if (result.success && result.recommendations) {
+        const newCache: CachedRecommendations = {
+          recommendations: result.recommendations,
+          gamesAnalyzed: profile.gamesAnalyzed || 0,
+          totalPlaytimeHours: profile.totalPlaytimeHours,
+          lastUpdated: new Date(),
+          topGames: topGamesData || undefined,
+          ratingsCount: feedbackData?.feedback?.length,
+        };
+        setCachedRecommendations(newCache);
+
         setState({
           stage: 'recommendations',
           recommendations: result.recommendations,
@@ -118,7 +146,7 @@ function ProfileContent() {
         error: 'Failed to load recommendations. Please try again.',
       });
     }
-  }, [profile?.id, profile?.gamesAnalyzed, profile?.totalPlaytimeHours, filters, fetchTopGamesData]);
+  }, [profile?.id, profile?.gamesAnalyzed, profile?.totalPlaytimeHours, filters, fetchTopGamesData, cachedRecommendations, setCachedRecommendations]);
 
   // Check for pending search from landing page and redirect
   useEffect(() => {
@@ -232,6 +260,16 @@ function ProfileContent() {
         ]);
 
         if (result.success && result.recommendations) {
+          // Update cache with new filtered results
+          setCachedRecommendations({
+            recommendations: result.recommendations,
+            gamesAnalyzed: state.gamesAnalyzed,
+            totalPlaytimeHours: state.totalPlaytimeHours,
+            lastUpdated: state.lastUpdated,
+            topGames: topGames,
+            ratingsCount: ratingsCount,
+          });
+
           setState({
             stage: 'recommendations',
             recommendations: result.recommendations,
@@ -255,6 +293,8 @@ function ProfileContent() {
 
   const handleResync = async () => {
     if (!profile?.steamId) return;
+    // Clear cache on resync
+    setCachedRecommendations(null);
     handleLinkSteam(profile.steamId);
   };
 
@@ -267,7 +307,8 @@ function ProfileContent() {
     }
 
     if (profile.steamId) {
-      loadRecommendations();
+      // Force refresh on retry
+      loadRecommendations(true);
     } else {
       setState({ stage: 'link_steam' });
     }

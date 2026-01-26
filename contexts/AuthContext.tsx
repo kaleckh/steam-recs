@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -15,6 +15,15 @@ interface UserProfile {
   totalPlaytimeHours: number;
 }
 
+export interface CachedRecommendations {
+  recommendations: unknown[];
+  gamesAnalyzed: number;
+  totalPlaytimeHours?: number;
+  lastUpdated: Date;
+  topGames?: unknown[];
+  ratingsCount?: number;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -23,6 +32,8 @@ interface AuthContextType {
   isPremium: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  cachedRecommendations: CachedRecommendations | null;
+  setCachedRecommendations: (data: CachedRecommendations | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,8 +43,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const supabase = createClient();
+  const [cachedRecommendations, setCachedRecommendations] = useState<CachedRecommendations | null>(null);
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
 
   const fetchProfile = useCallback(async (supabaseUserId: string) => {
     try {
@@ -127,6 +139,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isPremium,
         signOut,
         refreshProfile,
+        cachedRecommendations,
+        setCachedRecommendations,
       }}
     >
       {children}

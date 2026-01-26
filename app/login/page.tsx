@@ -18,8 +18,10 @@ function LoginContent() {
   const redirect = searchParams.get('redirect') || '/profile';
   const supabase = createClient();
 
-  // Get the site URL - prefer env var for production, fallback to window.location.origin
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+  // Use localhost in development, production URL in production
+  const siteUrl = process.env.NODE_ENV === 'development'
+    ? 'http://localhost:3000'
+    : 'https://steam-recs.vercel.app';
 
   // Check for pending search and redirect appropriately
   const getRedirectUrl = () => {
@@ -87,11 +89,17 @@ function LoginContent() {
     setIsLoading(true);
     setError(null);
 
+    // Store redirect destination before OAuth (query params may cause issues)
+    sessionStorage.setItem('authRedirect', redirect);
+
+    // Use exact URL without query params - must match Supabase Redirect URLs exactly
+    const redirectUrl = `${window.location.origin}/auth/callback`;
+
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${siteUrl}/auth/callback?redirect=${redirect}`,
+          redirectTo: redirectUrl,
         },
       });
 
