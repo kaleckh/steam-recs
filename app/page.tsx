@@ -1,4 +1,5 @@
 import Hero from '@/components/sections/Hero';
+import ExampleRecsSection from '@/components/sections/ExampleRecsSection';
 import HowItWorksSection from '@/components/sections/HowItWorksSection';
 import SteamByTheNumbersSection from '@/components/sections/SteamByTheNumbersSection';
 import Footer from '@/components/ui/Footer';
@@ -10,6 +11,7 @@ export default function Home() {
       <AnimatedBackground />
       <main className="relative">
         <Hero />
+        <ExampleRecsSection />
         <HowItWorksSection />
         <SteamByTheNumbersSection />
       </main>
