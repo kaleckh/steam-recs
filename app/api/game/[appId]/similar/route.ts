@@ -17,23 +17,37 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '12');
 
-    // First, get the target game to ensure it exists
+    // First, get the target game WITH its embedding (avoids subquery in similarity search)
     const targetCheckStart = Date.now();
-    const targetGame = await prisma.game.findUnique({
-      where: { appId },
-      select: { name: true },
-    });
+    const targetGame = await prisma.$queryRaw<
+      Array<{
+        name: string;
+        embedding: string | null;
+      }>
+    >`
+      SELECT name, embedding::text as embedding
+      FROM games
+      WHERE app_id = ${appId}
+      LIMIT 1
+    `;
+    console.log(`[Similar Games API] Target fetch took ${Date.now() - targetCheckStart}ms`);
 
-    console.log(`[Similar Games API] Target check took ${Date.now() - targetCheckStart}ms`);
-
-    if (!targetGame) {
+    if (targetGame.length === 0) {
       return NextResponse.json(
         { error: 'Game not found' },
         { status: 404 }
       );
     }
 
-    // Use raw SQL for vector similarity search
+    const target = targetGame[0];
+    if (!target.embedding) {
+      return NextResponse.json(
+        { error: 'Game has no embedding for similarity search' },
+        { status: 400 }
+      );
+    }
+
+    // Use the fetched embedding directly (no subquery = much faster)
     const vectorSearchStart = Date.now();
     const similarGames = await prisma.$queryRaw<
       Array<{
@@ -50,7 +64,7 @@ export async function GET(
       SELECT
         app_id,
         name,
-        (embedding <=> (SELECT embedding FROM games WHERE app_id = ${appId})::vector(1536)) as distance,
+        (embedding <=> ${target.embedding}::vector(1536)) as distance,
         release_year,
         review_positive_pct,
         review_count,
@@ -59,7 +73,7 @@ export async function GET(
       FROM games
       WHERE embedding IS NOT NULL
         AND app_id != ${appId}
-      ORDER BY embedding <=> (SELECT embedding FROM games WHERE app_id = ${appId})::vector(1536) ASC
+      ORDER BY embedding <=> ${target.embedding}::vector(1536) ASC
       LIMIT ${limit}
     `;
     console.log(`[Similar Games API] Vector search took ${Date.now() - vectorSearchStart}ms`);
@@ -89,7 +103,7 @@ export async function GET(
     console.log(`[Similar Games API] Total request took ${Date.now() - startTime}ms`);
     return NextResponse.json({
       success: true,
-      targetGame: targetGame.name,
+      targetGame: target.name,
       similarGames: formattedGames,
     });
   } catch (error) {
