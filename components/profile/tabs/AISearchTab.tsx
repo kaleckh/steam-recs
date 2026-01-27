@@ -307,6 +307,29 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
             </div>
           </form>
 
+          {/* Example Prompts - TRY ASKING */}
+          {!hasSearched && (
+            <div className="space-y-2 mb-4">
+              <p className="text-xs text-gray-500 font-mono uppercase tracking-wider">
+                <span className="text-neon-orange">//</span> TRY ASKING:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {examplePrompts.map((prompt, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setQuery(prompt);
+                      performSearch(prompt);
+                    }}
+                    className="px-3 py-2 text-xs font-mono text-gray-400 bg-terminal-dark border border-terminal-border rounded-lg hover:border-neon-cyan hover:text-neon-cyan transition-all text-left"
+                  >
+                    "{prompt}"
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Discovery Mode Slider */}
           <div className="mb-4 p-4 bg-terminal-dark/50 border border-terminal-border rounded-lg">
             <label className="block text-sm font-mono text-gray-400 mb-3">
@@ -341,25 +364,37 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
             </div>
           </div>
 
-          {/* Example Prompts */}
+          {/* Train Your Taste Banner */}
           {!hasSearched && (
-            <div className="space-y-2">
-              <p className="text-xs text-gray-500 font-mono uppercase tracking-wider">
-                <span className="text-neon-orange">//</span> TRY ASKING:
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {examplePrompts.map((prompt, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      setQuery(prompt);
-                      performSearch(prompt);
-                    }}
-                    className="px-3 py-2 text-xs font-mono text-gray-400 bg-terminal-dark border border-terminal-border rounded-lg hover:border-neon-cyan hover:text-neon-cyan transition-all text-left"
-                  >
-                    "{prompt}"
-                  </button>
-                ))}
+            <div className="p-4 bg-gradient-to-r from-neon-orange/10 to-neon-cyan/5 border-2 border-neon-orange/40 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-full bg-neon-orange/20 border border-neon-orange flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-neon-orange" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="orbitron text-sm font-bold text-neon-orange mb-1">
+                    TRAIN YOUR TASTE
+                  </h3>
+                  <p className="text-gray-400 font-mono text-xs mb-2">
+                    Search for games you know and <span className="text-neon-green font-bold">rate them</span> to improve your recommendations.
+                  </p>
+                  <div className="flex items-center gap-4 text-xs font-mono">
+                    <span className="flex items-center gap-1 text-neon-green">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                      </svg>
+                      Like = more
+                    </span>
+                    <span className="flex items-center gap-1 text-red-400">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+                      </svg>
+                      Dislike = less
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           )}

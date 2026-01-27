@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { GameRecommendation, RecommendationFilters } from '@/lib/api-client';
 
@@ -138,6 +138,49 @@ export default function DiscoverySection({
   isLoading = false,
 }: DiscoverySectionProps) {
   const colors = colorClasses[color];
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScrollability = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    setCanScrollLeft(container.scrollLeft > 0);
+    setCanScrollRight(
+      container.scrollLeft < container.scrollWidth - container.clientWidth - 1
+    );
+  }, []);
+
+  useEffect(() => {
+    checkScrollability();
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', checkScrollability);
+      window.addEventListener('resize', checkScrollability);
+    }
+    return () => {
+      if (container) {
+        container.removeEventListener('scroll', checkScrollability);
+      }
+      window.removeEventListener('resize', checkScrollability);
+    };
+  }, [checkScrollability, games]);
+
+  const scroll = (direction: 'left' | 'right') => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const scrollAmount = 600; // Scroll by ~2 cards
+    const targetScroll = direction === 'left'
+      ? container.scrollLeft - scrollAmount
+      : container.scrollLeft + scrollAmount;
+
+    container.scrollTo({
+      left: targetScroll,
+      behavior: 'smooth',
+    });
+  };
 
   return (
     <section className="py-8">
@@ -157,8 +200,53 @@ export default function DiscoverySection({
       </div>
 
       {/* Scrollable Games Row */}
-      <div className="relative">
-        <div className="flex gap-4 overflow-x-auto pb-4 px-4 md:px-8 scrollbar-thin scrollbar-thumb-terminal-border scrollbar-track-transparent">
+      <div className="relative group">
+        {/* Left Arrow */}
+        <button
+          onClick={() => scroll('left')}
+          className={`
+            absolute left-2 top-1/2 -translate-y-1/2 z-10
+            w-10 h-10 rounded-full
+            bg-terminal-dark/90 border border-terminal-border
+            flex items-center justify-center
+            transition-all duration-200
+            ${canScrollLeft
+              ? `opacity-0 group-hover:opacity-100 hover:border-${color === 'cyan' ? 'neon-cyan' : color === 'orange' ? 'neon-orange' : color === 'green' ? 'neon-green' : color === 'magenta' ? 'purple-500' : color === 'yellow' ? 'neon-yellow' : 'red-500'} hover:${colors.text} cursor-pointer`
+              : 'opacity-0 cursor-default pointer-events-none'}
+          `}
+          disabled={!canScrollLeft}
+          aria-label="Scroll left"
+        >
+          <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+
+        {/* Right Arrow */}
+        <button
+          onClick={() => scroll('right')}
+          className={`
+            absolute right-2 top-1/2 -translate-y-1/2 z-10
+            w-10 h-10 rounded-full
+            bg-terminal-dark/90 border border-terminal-border
+            flex items-center justify-center
+            transition-all duration-200
+            ${canScrollRight
+              ? `opacity-0 group-hover:opacity-100 hover:border-${color === 'cyan' ? 'neon-cyan' : color === 'orange' ? 'neon-orange' : color === 'green' ? 'neon-green' : color === 'magenta' ? 'purple-500' : color === 'yellow' ? 'neon-yellow' : 'red-500'} hover:${colors.text} cursor-pointer`
+              : 'opacity-0 cursor-default pointer-events-none'}
+          `}
+          disabled={!canScrollRight}
+          aria-label="Scroll right"
+        >
+          <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        <div
+          ref={scrollContainerRef}
+          className="flex gap-4 overflow-x-auto pb-4 px-4 md:px-8 scrollbar-thin scrollbar-thumb-terminal-border scrollbar-track-transparent"
+        >
           {isLoading ? (
             <>
               <LoadingCard />

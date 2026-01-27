@@ -15,6 +15,7 @@ import { getHybridVector } from '@/lib/vector-learning';
  * - filters?: {
  *     minReviewScore?: number (0-100)
  *     minReviewCount?: number
+ *     maxReviewCount?: number (for hidden gems - caps visibility)
  *     releaseYearMin?: number
  *     releaseYearMax?: number
  *     isFree?: boolean
@@ -166,10 +167,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Review count filter
+    // Review count filter (minimum)
     if (filters.minReviewCount !== undefined) {
       filterConditions.push(
         Prisma.sql`review_count >= ${filters.minReviewCount}`
+      );
+    }
+
+    // Review count filter (maximum - for hidden gems)
+    if (filters.maxReviewCount !== undefined) {
+      filterConditions.push(
+        Prisma.sql`review_count <= ${filters.maxReviewCount}`
       );
     }
 

@@ -28,6 +28,7 @@ export interface RecommendationFilters {
   excludeOwned?: boolean;
   minReviewScore?: number;
   minReviewCount?: number;
+  maxReviewCount?: number; // For hidden gems - caps visibility
   releaseYearMin?: number;
   releaseYearMax?: number;
   isFree?: boolean;
