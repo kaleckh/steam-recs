@@ -1,4 +1,5 @@
 import { GameDetail } from '@/app/game/[appId]/page';
+import GameVoting from './GameVoting';
 
 interface GameInfoSidebarProps {
   game: GameDetail;
@@ -51,6 +52,11 @@ export default function GameInfoSidebar({ game }: GameInfoSidebarProps) {
               {game.price}
             </span>
           ) : null}
+        </div>
+
+        {/* Rate This Game */}
+        <div className="mb-6">
+          <GameVoting appId={game.appId} gameName={game.name} />
         </div>
 
         {/* Overall Reviews */}

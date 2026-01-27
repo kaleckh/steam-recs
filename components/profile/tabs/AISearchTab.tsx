@@ -9,6 +9,12 @@ interface SearchFilters {
   isFree?: boolean;
 }
 
+interface TasteProfile {
+  topGenres: string[];
+  topTags: string[];
+  gamesAnalyzed: number;
+}
+
 const LOADING_WORDS = ['SEARCHING', 'CHECKING', 'LOOTING', 'BROWSING', 'SCANNING', 'ANALYZING'];
 
 interface SearchResult {
@@ -47,10 +53,6 @@ interface ConversationData {
   context: ConversationContext;
 }
 
-interface CollectedAnswer {
-  question: string;
-  answer: string;
-}
 
 interface SearchResponse {
   success: boolean;
@@ -78,7 +80,6 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conversation, setConversation] = useState<ConversationData | null>(null);
-  const [followUpInput, setFollowUpInput] = useState('');
 
   // If not premium, show upgrade prompt instead of search
   if (!isPremium) {
@@ -116,10 +117,10 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
   }
   const [loadingWordIndex, setLoadingWordIndex] = useState(0);
   const [hasSearched, setHasSearched] = useState(false);
+  const [tasteProfile, setTasteProfile] = useState<TasteProfile | null>(null);
 
-  // Multi-question refinement state
-  const [collectedAnswers, setCollectedAnswers] = useState<CollectedAnswer[]>([]);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  // Multi-question refinement state - now uses multi-select
+  const [selectedAnswers, setSelectedAnswers] = useState<Set<string>>(new Set());
 
   // Filter state
   const [filters, setFilters] = useState<SearchFilters>({
@@ -175,11 +176,29 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
     return () => clearInterval(interval);
   }, [isLoading]);
 
+  // Fetch taste profile on mount
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchTasteProfile = async () => {
+      try {
+        const response = await fetch(`/api/user/taste-profile?userId=${userId}`);
+        const data = await response.json();
+        if (data.success) {
+          setTasteProfile(data.profile);
+        }
+      } catch (error) {
+        console.error('Failed to fetch taste profile:', error);
+      }
+    };
+
+    fetchTasteProfile();
+  }, [userId]);
+
   const performSearch = async (searchQuery: string) => {
     setIsLoading(true);
     setError(null);
-    setCollectedAnswers([]);
-    setCurrentQuestionIndex(0);
+    setSelectedAnswers(new Set());
     setHasSearched(true);
 
     try {
@@ -307,95 +326,48 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
             </div>
           </form>
 
-          {/* Example Prompts - TRY ASKING */}
+          {/* Discovery Mode Slider */}
           {!hasSearched && (
-            <div className="space-y-2 mb-4">
-              <p className="text-xs text-gray-500 font-mono uppercase tracking-wider">
-                <span className="text-neon-orange">//</span> TRY ASKING:
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {examplePrompts.map((prompt, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      setQuery(prompt);
-                      performSearch(prompt);
-                    }}
-                    className="px-3 py-2 text-xs font-mono text-gray-400 bg-terminal-dark border border-terminal-border rounded-lg hover:border-neon-cyan hover:text-neon-cyan transition-all text-left"
-                  >
-                    "{prompt}"
-                  </button>
-                ))}
+            <div className="flex items-center gap-4 p-3 bg-terminal-dark/30 border border-terminal-border/50 rounded-lg">
+              <span className="text-sm font-mono text-gray-400 whitespace-nowrap">
+                Show me:
+              </span>
+              <div className="flex items-center gap-3 flex-1">
+                <span className={`text-sm font-mono whitespace-nowrap transition-colors ${filters.popularityScore < 50 ? 'text-neon-orange font-bold' : 'text-gray-500'}`}>
+                  Hidden Gems
+                </span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={filters.popularityScore}
+                  onChange={(e) => setFilters(prev => ({ ...prev, popularityScore: parseInt(e.target.value) }))}
+                  className="flex-1 h-2 bg-terminal-border rounded-full appearance-none cursor-pointer slider-retro max-w-[200px]"
+                />
+                <span className={`text-sm font-mono whitespace-nowrap transition-colors ${filters.popularityScore > 50 ? 'text-neon-green font-bold' : 'text-gray-500'}`}>
+                  Popular
+                </span>
               </div>
             </div>
           )}
 
-          {/* Discovery Mode Slider */}
-          <div className="mb-4 p-4 bg-terminal-dark/50 border border-terminal-border rounded-lg">
-            <label className="block text-sm font-mono text-gray-400 mb-3">
-              <span className="text-neon-green">&gt;</span> Discovery Mode:{' '}
-              <span className={
-                filters.popularityScore === 50
-                  ? 'text-gray-400'
-                  : filters.popularityScore < 50
-                    ? 'text-neon-orange'
-                    : 'text-neon-green'
-              }>
-                {filters.popularityScore === 50
-                  ? 'Balanced'
-                  : filters.popularityScore < 50
-                    ? 'Hidden Gems'
-                    : 'Popular Titles'}
-              </span>
-            </label>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="5"
-              value={filters.popularityScore}
-              onChange={(e) => setFilters(prev => ({ ...prev, popularityScore: parseInt(e.target.value) }))}
-              className="slider-retro w-full"
-            />
-            <div className="flex justify-between text-xs text-gray-600 mt-1 font-mono">
-              <span className="text-neon-orange">Hidden Gems</span>
-              <span>Balanced</span>
-              <span className="text-neon-green">Popular</span>
-            </div>
-          </div>
-
-          {/* Train Your Taste Banner */}
+          {/* Example prompts - inline and subtle */}
           {!hasSearched && (
-            <div className="p-4 bg-gradient-to-r from-neon-orange/10 to-neon-cyan/5 border-2 border-neon-orange/40 rounded-lg">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-neon-orange/20 border border-neon-orange flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-neon-orange" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h3 className="orbitron text-sm font-bold text-neon-orange mb-1">
-                    TRAIN YOUR TASTE
-                  </h3>
-                  <p className="text-gray-400 font-mono text-xs mb-2">
-                    Search for games you know and <span className="text-neon-green font-bold">rate them</span> to improve your recommendations.
-                  </p>
-                  <div className="flex items-center gap-4 text-xs font-mono">
-                    <span className="flex items-center gap-1 text-neon-green">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                      </svg>
-                      Like = more
-                    </span>
-                    <span className="flex items-center gap-1 text-red-400">
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
-                      </svg>
-                      Dislike = less
-                    </span>
-                  </div>
-                </div>
-              </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-gray-600 font-mono">Try:</span>
+              {examplePrompts.slice(0, 3).map((prompt, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setQuery(prompt);
+                    performSearch(prompt);
+                  }}
+                  className="text-gray-500 hover:text-neon-cyan font-mono transition-colors"
+                >
+                  {prompt}{i < 2 ? ' •' : ''}
+                </button>
+              ))}
             </div>
           )}
         </div>
@@ -499,7 +471,7 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
             </label>
           </div>
 
-          {/* Follow-up Questions */}
+          {/* Follow-up Questions - Multi-select */}
           {conversation?.canRefine && conversation.followUpQuestions && conversation.followUpQuestions.length > 0 && (
             <div className="terminal-box rounded-lg p-5">
               <div className="flex items-center justify-between mb-4">
@@ -507,94 +479,70 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
                   Refine your search
                 </span>
                 <span className="px-2 py-1 bg-neon-green/10 border border-neon-green/30 text-neon-green text-xs font-mono rounded">
-                  More answers = better results
+                  Select all that apply
                 </span>
               </div>
 
               <div className="space-y-4">
-                {conversation.followUpQuestions.map((q, qIndex) => {
-                  const isAnswered = qIndex < collectedAnswers.length;
-                  const isCurrent = qIndex === currentQuestionIndex;
-                  const isUpcoming = qIndex > currentQuestionIndex;
-
-                  return (
-                    <div key={qIndex} className={`transition-all ${isUpcoming ? 'opacity-40' : ''}`}>
-                      <div className="flex items-center gap-2 mb-2">
-                        {isAnswered ? (
-                          <span className="text-neon-green">✓</span>
-                        ) : (
-                          <span className="text-gray-600">{qIndex + 1}.</span>
-                        )}
-                        <p className={`font-mono text-sm ${isAnswered ? 'text-gray-500' : 'text-neon-cyan'}`}>
-                          {q.question}
-                        </p>
-                        {isAnswered && (
-                          <span className="text-neon-green font-mono text-sm ml-2">
-                            → {collectedAnswers[qIndex].answer}
-                          </span>
-                        )}
-                      </div>
-
-                      {isCurrent && !isAnswered && (
-                        <div className="flex flex-wrap gap-2 ml-5">
-                          {q.suggestedAnswers.map((answer, aIndex) => (
-                            <button
-                              key={aIndex}
-                              onClick={() => {
-                                setCollectedAnswers(prev => [...prev, { question: q.question, answer }]);
-                                if (currentQuestionIndex < conversation.followUpQuestions.length - 1) {
-                                  setCurrentQuestionIndex(prev => prev + 1);
+                {conversation.followUpQuestions.map((q, qIndex) => (
+                  <div key={qIndex}>
+                    <p className="font-mono text-sm text-neon-cyan mb-2">
+                      {q.question}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {q.suggestedAnswers.map((answer, aIndex) => {
+                        const answerKey = `${qIndex}-${answer}`;
+                        const isSelected = selectedAnswers.has(answerKey);
+                        return (
+                          <button
+                            key={aIndex}
+                            onClick={() => {
+                              setSelectedAnswers(prev => {
+                                const newSet = new Set(prev);
+                                if (isSelected) {
+                                  newSet.delete(answerKey);
+                                } else {
+                                  newSet.add(answerKey);
                                 }
-                                setFollowUpInput('');
-                              }}
-                              disabled={isLoading}
-                              className="px-3 py-1.5 bg-terminal-dark border border-neon-cyan/50 rounded text-neon-cyan font-mono text-sm transition-all hover:bg-neon-cyan/20 hover:border-neon-cyan disabled:opacity-50"
-                            >
-                              {answer}
-                            </button>
-                          ))}
-                          <input
-                            type="text"
-                            value={followUpInput}
-                            onChange={(e) => setFollowUpInput(e.target.value)}
-                            placeholder="Other..."
-                            className="px-3 py-1.5 bg-terminal-dark border border-terminal-border rounded text-neon-cyan placeholder-gray-600 font-mono text-sm focus:outline-none focus:border-neon-cyan transition-colors w-24"
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && followUpInput.trim()) {
-                                setCollectedAnswers(prev => [...prev, { question: q.question, answer: followUpInput.trim() }]);
-                                if (currentQuestionIndex < conversation.followUpQuestions.length - 1) {
-                                  setCurrentQuestionIndex(prev => prev + 1);
-                                }
-                                setFollowUpInput('');
-                              }
+                                return newSet;
+                              });
                             }}
-                          />
-                        </div>
-                      )}
+                            disabled={isLoading}
+                            className={`px-3 py-1.5 rounded font-mono text-sm transition-all disabled:opacity-50 ${
+                              isSelected
+                                ? 'bg-neon-cyan/20 border-2 border-neon-cyan text-neon-cyan'
+                                : 'bg-terminal-dark border border-terminal-border text-gray-400 hover:border-neon-cyan/50 hover:text-gray-300'
+                            }`}
+                          >
+                            {isSelected && <span className="mr-1.5">✓</span>}
+                            {answer}
+                          </button>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
 
               <div className="mt-4 pt-4 border-t border-terminal-border flex items-center justify-between">
                 <span className="text-gray-500 font-mono text-xs">
-                  {collectedAnswers.length} of {conversation.followUpQuestions.length} answered
+                  {selectedAnswers.size} selected
                 </span>
                 <button
                   onClick={() => {
-                    if (collectedAnswers.length > 0) {
-                      const allAnswers = collectedAnswers.map(a => a.answer).join(', ');
+                    if (selectedAnswers.size > 0) {
+                      // Extract just the answer text from the keys (format: "qIndex-answer")
+                      const allAnswers = [...selectedAnswers]
+                        .map(key => key.split('-').slice(1).join('-'))
+                        .join(', ');
                       handleFollowUpClick(allAnswers);
-                      setCollectedAnswers([]);
-                      setCurrentQuestionIndex(0);
+                      setSelectedAnswers(new Set());
                     }
                   }}
-                  disabled={collectedAnswers.length === 0 || isLoading}
+                  disabled={selectedAnswers.size === 0 || isLoading}
                   className="px-4 py-2 bg-neon-orange/20 border border-neon-orange text-neon-orange font-mono text-sm rounded hover:bg-neon-orange/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {collectedAnswers.length === conversation.followUpQuestions.length
-                    ? 'SEARCH WITH ALL ANSWERS'
-                    : `SEARCH NOW (${collectedAnswers.length})`}
+                  REFINE SEARCH ({selectedAnswers.size})
                 </button>
               </div>
             </div>
