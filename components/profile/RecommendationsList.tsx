@@ -184,15 +184,15 @@ export default function RecommendationsList({
   // Show message when genre filter removes all results
   if (sortedRecommendations.length === 0 && genreFilter) {
     return (
-      <div className="w-full max-w-7xl mx-auto space-y-6">
+      <div className="w-full max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Sort & Filter Controls */}
-        <div className="flex flex-wrap items-center gap-4 terminal-box rounded-lg p-4">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4 terminal-box rounded-lg p-3 sm:p-4">
           <div className="flex items-center gap-2">
-            <label className="text-gray-500 font-mono text-xs uppercase tracking-wider">Sort:</label>
+            <label className="text-gray-500 font-mono text-[10px] sm:text-xs uppercase tracking-wider">Sort:</label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="bg-terminal-dark border border-terminal-border rounded px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-neon-cyan transition-colors cursor-pointer"
+              className="flex-1 sm:flex-none bg-terminal-dark border border-terminal-border rounded px-2 sm:px-3 py-2 text-xs sm:text-sm font-mono text-white focus:outline-none focus:border-neon-cyan transition-colors cursor-pointer"
             >
               {SORT_OPTIONS.map(option => (
                 <option key={option.value} value={option.value}>
@@ -204,11 +204,11 @@ export default function RecommendationsList({
 
           {availableGenres.length > 0 && (
             <div className="flex items-center gap-2">
-              <label className="text-gray-500 font-mono text-xs uppercase tracking-wider">Genre:</label>
+              <label className="text-gray-500 font-mono text-[10px] sm:text-xs uppercase tracking-wider">Genre:</label>
               <select
                 value={genreFilter || ''}
                 onChange={(e) => setGenreFilter(e.target.value || null)}
-                className="bg-terminal-dark border border-terminal-border rounded px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-neon-cyan transition-colors cursor-pointer"
+                className="flex-1 sm:flex-none bg-terminal-dark border border-terminal-border rounded px-2 sm:px-3 py-2 text-xs sm:text-sm font-mono text-white focus:outline-none focus:border-neon-cyan transition-colors cursor-pointer"
               >
                 <option value="">All Genres</option>
                 {availableGenres.map(genre => (
@@ -220,18 +220,18 @@ export default function RecommendationsList({
             </div>
           )}
 
-          <div className="ml-auto">
+          <div className="sm:ml-auto text-center sm:text-right">
             <button
               onClick={() => setGenreFilter(null)}
-              className="text-neon-orange hover:text-white transition-colors font-mono text-xs"
+              className="text-neon-orange hover:text-white transition-colors font-mono text-[10px] sm:text-xs"
             >
               [clear filter]
             </button>
           </div>
         </div>
 
-        <div className="terminal-box rounded-lg p-8 text-center">
-          <p className="text-gray-400 font-mono">
+        <div className="terminal-box rounded-lg p-4 sm:p-8 text-center">
+          <p className="text-gray-400 font-mono text-xs sm:text-sm">
             No games found with genre <span className="text-neon-cyan">&quot;{genreFilter}&quot;</span>
           </p>
         </div>
@@ -258,10 +258,10 @@ export default function RecommendationsList({
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6">
       {/* Sort & Filter Controls */}
-      <div className="flex flex-wrap items-center gap-4 terminal-box rounded-lg p-4">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4 terminal-box rounded-lg p-3 sm:p-4">
         {/* Sort Dropdown */}
         <div className="flex items-center gap-2">
-          <label className="text-gray-500 font-mono text-xs uppercase tracking-wider flex items-center gap-2">
+          <label className="text-gray-500 font-mono text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1 sm:gap-2 whitespace-nowrap">
             Sort:
             {!isPremium && (
               <span className="px-1 py-0.5 text-[8px] bg-neon-orange/20 text-neon-orange border border-neon-orange/50 rounded">
@@ -272,7 +272,7 @@ export default function RecommendationsList({
           <select
             value={sortBy}
             onChange={(e) => handleSortChange(e.target.value as SortOption)}
-            className={`bg-terminal-dark border border-terminal-border rounded px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-neon-cyan transition-colors cursor-pointer ${!isPremium ? 'opacity-60' : ''}`}
+            className={`flex-1 sm:flex-none bg-terminal-dark border border-terminal-border rounded px-2 sm:px-3 py-2 text-xs sm:text-sm font-mono text-white focus:outline-none focus:border-neon-cyan transition-colors cursor-pointer ${!isPremium ? 'opacity-60' : ''}`}
           >
             {SORT_OPTIONS.map(option => (
               <option key={option.value} value={option.value}>
@@ -285,7 +285,7 @@ export default function RecommendationsList({
         {/* Genre Filter */}
         {availableGenres.length > 0 && (
           <div className="flex items-center gap-2">
-            <label className="text-gray-500 font-mono text-xs uppercase tracking-wider flex items-center gap-2">
+            <label className="text-gray-500 font-mono text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1 sm:gap-2 whitespace-nowrap">
               Genre:
               {!isPremium && (
                 <span className="px-1 py-0.5 text-[8px] bg-neon-orange/20 text-neon-orange border border-neon-orange/50 rounded">
@@ -296,7 +296,7 @@ export default function RecommendationsList({
             <select
               value={genreFilter || ''}
               onChange={(e) => handleGenreChange(e.target.value || null)}
-              className={`bg-terminal-dark border border-terminal-border rounded px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-neon-cyan transition-colors cursor-pointer ${!isPremium ? 'opacity-60' : ''}`}
+              className={`flex-1 sm:flex-none bg-terminal-dark border border-terminal-border rounded px-2 sm:px-3 py-2 text-xs sm:text-sm font-mono text-white focus:outline-none focus:border-neon-cyan transition-colors cursor-pointer ${!isPremium ? 'opacity-60' : ''}`}
             >
               <option value="">All Genres</option>
               {availableGenres.map(genre => (
@@ -309,21 +309,21 @@ export default function RecommendationsList({
         )}
 
         {/* Results count */}
-        <div className="ml-auto text-gray-500 font-mono text-xs">
+        <div className="sm:ml-auto text-gray-500 font-mono text-[10px] sm:text-xs text-center sm:text-right">
           <span className="text-neon-cyan">{sortedRecommendations.length}</span> games
           {genreFilter && (
             <button
               onClick={() => setGenreFilter(null)}
               className="ml-2 text-neon-orange hover:text-white transition-colors"
             >
-              [clear filter]
+              [clear]
             </button>
           )}
         </div>
       </div>
 
       {/* Recommendations Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
         {sortedRecommendations.map((game, index) => (
           <div
             key={game.appId}

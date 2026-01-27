@@ -17,12 +17,12 @@ export default function SimilarGames({ games }: SimilarGamesProps) {
         <span className="text-gray-400 text-sm font-mono ml-16">SIMILAR_GAMES.db</span>
       </div>
 
-      <div className="p-6">
-        <h2 className="text-xl font-bold text-white mb-6 orbitron flex items-center gap-2">
+      <div className="p-4 sm:p-6">
+        <h2 className="text-base sm:text-xl font-bold text-white mb-4 sm:mb-6 orbitron flex items-center gap-2">
           <span className="text-neon-cyan">&gt;</span> SIMILAR GAMES
         </h2>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-4">
           {games.map((game) => {
             const similarityPercent = Math.round(game.similarity * 100);
 
@@ -50,16 +50,16 @@ export default function SimilarGames({ games }: SimilarGamesProps) {
                 </div>
 
                 {/* Content */}
-                <div className="p-3">
+                <div className="p-2 sm:p-3">
                   {/* Title */}
-                  <h3 className="text-white text-xs font-medium line-clamp-2 mb-2 group-hover:text-neon-cyan transition-colors min-h-[2rem] orbitron">
+                  <h3 className="text-white text-[10px] sm:text-xs font-medium line-clamp-2 mb-1 sm:mb-2 group-hover:text-neon-cyan transition-colors min-h-[1.5rem] sm:min-h-[2rem] orbitron">
                     {game.name}
                   </h3>
 
                   {/* Match Badge */}
-                  <div className="flex items-center justify-between text-xs mb-2">
+                  <div className="flex items-center justify-between text-[10px] sm:text-xs mb-1 sm:mb-2">
                     <div
-                      className={`px-2 py-0.5 rounded font-bold font-mono ${
+                      className={`px-1.5 sm:px-2 py-0.5 rounded font-bold font-mono ${
                         similarityPercent >= 80
                           ? 'bg-neon-green/20 text-neon-green border border-neon-green/50'
                           : similarityPercent >= 60
@@ -73,8 +73,8 @@ export default function SimilarGames({ games }: SimilarGamesProps) {
 
                   {/* Review Score */}
                   {game.reviewScore !== null && (
-                    <div className="flex items-center gap-1 text-xs text-neon-cyan font-mono">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <div className="flex items-center gap-1 text-[10px] sm:text-xs text-neon-cyan font-mono">
+                      <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                       </svg>
                       <span>{game.reviewScore}%</span>
@@ -82,7 +82,7 @@ export default function SimilarGames({ games }: SimilarGamesProps) {
                   )}
 
                   {/* Price */}
-                  <div className="mt-2 text-xs font-mono">
+                  <div className="mt-1 sm:mt-2 text-[10px] sm:text-xs font-mono">
                     {game.isFree ? (
                       <span className="text-neon-green font-bold">FREE</span>
                     ) : game.price ? (

@@ -239,28 +239,28 @@ export default function Hero() {
           </div>
 
           {/* Secondary CTA - Personalized Recommendations */}
-          <div className="terminal-box rounded-lg p-6 max-w-lg w-full">
-            <div className="flex items-center gap-4">
+          <div className="terminal-box rounded-lg p-4 sm:p-6 max-w-lg w-full">
+            <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
               <div className="w-14 h-14 rounded-lg bg-neon-orange/20 border border-neon-orange flex items-center justify-center flex-shrink-0">
                 <svg className="w-7 h-7 text-neon-orange" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </div>
-              <div className="flex-1 text-left">
-                <h3 className="orbitron text-lg font-bold text-white">PERSONALIZED FOR YOU</h3>
-                <p className="text-sm text-gray-500 font-mono">Connect Steam for AI recommendations based on your library</p>
+              <div className="flex-1">
+                <h3 className="orbitron text-base sm:text-lg font-bold text-white">PERSONALIZED FOR YOU</h3>
+                <p className="text-xs sm:text-sm text-gray-500 font-mono">Connect Steam for AI recommendations based on your library</p>
               </div>
               <button
                 onClick={handleGetRecommendations}
-                className="px-4 py-2 bg-neon-orange/20 text-neon-orange border border-neon-orange rounded font-mono text-sm hover:bg-neon-orange hover:text-black transition-all whitespace-nowrap"
+                className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-neon-orange/20 text-neon-orange border border-neon-orange rounded font-mono text-sm hover:bg-neon-orange hover:text-black transition-all whitespace-nowrap"
               >
                 CONNECT
               </button>
             </div>
           </div>
 
-          {/* Trust badges */}
-          <div className="flex items-center gap-6 text-sm font-mono">
+          {/* Trust badges - stack on smallest screens */}
+          <div className="flex flex-wrap justify-center items-center gap-3 sm:gap-6 text-xs sm:text-sm font-mono">
             <span className="flex items-center gap-2 text-gray-500">
               <span className="text-neon-green">✓</span> Free to try
             </span>

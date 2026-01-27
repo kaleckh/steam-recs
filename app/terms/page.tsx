@@ -12,30 +12,30 @@ export default function TermsPage() {
     <div className="min-h-screen bg-terminal-dark">
       {/* Header */}
       <div className="border-b border-terminal-border">
-        <div className="max-w-4xl mx-auto px-6 py-12">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
           <Link
             href="/"
-            className="text-neon-cyan font-mono text-sm hover:underline mb-4 inline-block"
+            className="text-neon-cyan font-mono text-xs sm:text-sm hover:underline mb-3 sm:mb-4 inline-block"
           >
             &larr; Back to Home
           </Link>
-          <h1 className="orbitron text-4xl font-bold text-white mb-2">Terms of Service</h1>
-          <p className="text-gray-500 font-mono text-sm">
+          <h1 className="orbitron text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">Terms of Service</h1>
+          <p className="text-gray-500 font-mono text-xs sm:text-sm">
             Last updated: {lastUpdated}
           </p>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <div className="space-y-12 text-gray-300 font-mono">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        <div className="space-y-8 sm:space-y-12 text-gray-300 font-mono">
 
           {/* Introduction */}
           <section>
-            <h2 className="text-xl font-bold text-neon-cyan mb-4 flex items-center gap-2">
+            <h2 className="text-base sm:text-xl font-bold text-neon-cyan mb-3 sm:mb-4 flex items-center gap-2">
               <span className="text-neon-green">&gt;</span> Agreement to Terms
             </h2>
-            <div className="terminal-box rounded-lg p-6 space-y-4">
+            <div className="terminal-box rounded-lg p-4 sm:p-6 space-y-3 sm:space-y-4 text-sm sm:text-base">
               <p>
                 By accessing or using Steam Recs (&quot;the Service&quot;), you agree to be bound by these
                 Terms of Service. If you do not agree to these terms, please do not use the Service.
@@ -49,10 +49,10 @@ export default function TermsPage() {
 
           {/* Description of Service */}
           <section>
-            <h2 className="text-xl font-bold text-neon-cyan mb-4 flex items-center gap-2">
+            <h2 className="text-base sm:text-xl font-bold text-neon-cyan mb-3 sm:mb-4 flex items-center gap-2">
               <span className="text-neon-green">&gt;</span> Description of Service
             </h2>
-            <div className="terminal-box rounded-lg p-6 space-y-4">
+            <div className="terminal-box rounded-lg p-4 sm:p-6 space-y-3 sm:space-y-4 text-sm sm:text-base">
               <p>
                 Steam Recs provides personalized game recommendations based on your publicly
                 available Steam library data. Our service analyzes your gaming preferences to
@@ -73,10 +73,10 @@ export default function TermsPage() {
 
           {/* User Requirements */}
           <section>
-            <h2 className="text-xl font-bold text-neon-cyan mb-4 flex items-center gap-2">
+            <h2 className="text-base sm:text-xl font-bold text-neon-cyan mb-3 sm:mb-4 flex items-center gap-2">
               <span className="text-neon-green">&gt;</span> User Requirements
             </h2>
-            <div className="terminal-box rounded-lg p-6 space-y-4">
+            <div className="terminal-box rounded-lg p-4 sm:p-6 space-y-3 sm:space-y-4 text-sm sm:text-base">
               <p>To use the Service, you must:</p>
               <ul className="list-none space-y-3 text-sm mt-4">
                 <li className="flex items-start gap-2">
@@ -101,10 +101,10 @@ export default function TermsPage() {
 
           {/* Acceptable Use */}
           <section>
-            <h2 className="text-xl font-bold text-neon-cyan mb-4 flex items-center gap-2">
+            <h2 className="text-base sm:text-xl font-bold text-neon-cyan mb-3 sm:mb-4 flex items-center gap-2">
               <span className="text-neon-green">&gt;</span> Acceptable Use
             </h2>
-            <div className="terminal-box rounded-lg p-6 space-y-4">
+            <div className="terminal-box rounded-lg p-4 sm:p-6 space-y-3 sm:space-y-4 text-sm sm:text-base">
               <p>You agree NOT to:</p>
               <ul className="list-none space-y-3 text-sm mt-4">
                 <li className="flex items-start gap-2">
@@ -133,10 +133,10 @@ export default function TermsPage() {
 
           {/* Premium Subscriptions */}
           <section>
-            <h2 className="text-xl font-bold text-neon-cyan mb-4 flex items-center gap-2">
+            <h2 className="text-base sm:text-xl font-bold text-neon-cyan mb-3 sm:mb-4 flex items-center gap-2">
               <span className="text-neon-green">&gt;</span> Premium Subscriptions
             </h2>
-            <div className="terminal-box rounded-lg p-6 space-y-4">
+            <div className="terminal-box rounded-lg p-4 sm:p-6 space-y-3 sm:space-y-4 text-sm sm:text-base">
               <p>
                 Premium subscriptions are processed through Stripe. By subscribing:
               </p>
@@ -163,10 +163,10 @@ export default function TermsPage() {
 
           {/* Intellectual Property */}
           <section>
-            <h2 className="text-xl font-bold text-neon-cyan mb-4 flex items-center gap-2">
+            <h2 className="text-base sm:text-xl font-bold text-neon-cyan mb-3 sm:mb-4 flex items-center gap-2">
               <span className="text-neon-green">&gt;</span> Intellectual Property
             </h2>
-            <div className="terminal-box rounded-lg p-6 space-y-4">
+            <div className="terminal-box rounded-lg p-4 sm:p-6 space-y-3 sm:space-y-4 text-sm sm:text-base">
               <p>
                 The Service, including its design, features, and content created by us, is owned
                 by Steam Recs and protected by applicable intellectual property laws.
@@ -180,10 +180,10 @@ export default function TermsPage() {
 
           {/* Disclaimers */}
           <section>
-            <h2 className="text-xl font-bold text-neon-cyan mb-4 flex items-center gap-2">
+            <h2 className="text-base sm:text-xl font-bold text-neon-cyan mb-3 sm:mb-4 flex items-center gap-2">
               <span className="text-neon-green">&gt;</span> Disclaimers
             </h2>
-            <div className="terminal-box rounded-lg p-6 space-y-4">
+            <div className="terminal-box rounded-lg p-4 sm:p-6 space-y-3 sm:space-y-4 text-sm sm:text-base">
               <p>
                 THE SERVICE IS PROVIDED &quot;AS IS&quot; WITHOUT WARRANTIES OF ANY KIND. We do not guarantee:
               </p>
@@ -210,10 +210,10 @@ export default function TermsPage() {
 
           {/* Limitation of Liability */}
           <section>
-            <h2 className="text-xl font-bold text-neon-cyan mb-4 flex items-center gap-2">
+            <h2 className="text-base sm:text-xl font-bold text-neon-cyan mb-3 sm:mb-4 flex items-center gap-2">
               <span className="text-neon-green">&gt;</span> Limitation of Liability
             </h2>
-            <div className="terminal-box rounded-lg p-6">
+            <div className="terminal-box rounded-lg p-4 sm:p-6 text-sm sm:text-base">
               <p>
                 To the maximum extent permitted by law, Steam Recs shall not be liable for any
                 indirect, incidental, special, consequential, or punitive damages resulting from
@@ -224,10 +224,10 @@ export default function TermsPage() {
 
           {/* Termination */}
           <section>
-            <h2 className="text-xl font-bold text-neon-cyan mb-4 flex items-center gap-2">
+            <h2 className="text-base sm:text-xl font-bold text-neon-cyan mb-3 sm:mb-4 flex items-center gap-2">
               <span className="text-neon-green">&gt;</span> Termination
             </h2>
-            <div className="terminal-box rounded-lg p-6 space-y-4">
+            <div className="terminal-box rounded-lg p-4 sm:p-6 space-y-3 sm:space-y-4 text-sm sm:text-base">
               <p>
                 We reserve the right to suspend or terminate your access to the Service at any
                 time for violation of these terms or for any other reason at our discretion.
@@ -240,10 +240,10 @@ export default function TermsPage() {
 
           {/* Changes to Terms */}
           <section>
-            <h2 className="text-xl font-bold text-neon-cyan mb-4 flex items-center gap-2">
+            <h2 className="text-base sm:text-xl font-bold text-neon-cyan mb-3 sm:mb-4 flex items-center gap-2">
               <span className="text-neon-green">&gt;</span> Changes to Terms
             </h2>
-            <div className="terminal-box rounded-lg p-6">
+            <div className="terminal-box rounded-lg p-4 sm:p-6 text-sm sm:text-base">
               <p>
                 We may update these terms from time to time. Continued use of the Service after
                 changes constitutes acceptance of the new terms. For significant changes, we will
@@ -254,14 +254,14 @@ export default function TermsPage() {
 
           {/* Contact */}
           <section>
-            <h2 className="text-xl font-bold text-neon-cyan mb-4 flex items-center gap-2">
+            <h2 className="text-base sm:text-xl font-bold text-neon-cyan mb-3 sm:mb-4 flex items-center gap-2">
               <span className="text-neon-green">&gt;</span> Contact Us
             </h2>
-            <div className="terminal-box rounded-lg p-6">
-              <p className="mb-4">
+            <div className="terminal-box rounded-lg p-4 sm:p-6 text-sm sm:text-base">
+              <p className="mb-3 sm:mb-4">
                 If you have questions about these terms:
               </p>
-              <div className="bg-terminal-light rounded-lg p-4 font-mono text-sm">
+              <div className="bg-terminal-light rounded-lg p-3 sm:p-4 font-mono text-xs sm:text-sm">
                 <p className="text-gray-400">Email: <span className="text-neon-cyan">support@steamrecs.io</span></p>
               </div>
             </div>

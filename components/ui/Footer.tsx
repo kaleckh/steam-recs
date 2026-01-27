@@ -15,7 +15,7 @@ export default function Footer() {
 
   return (
     <footer
-      className="relative py-16 px-4 sm:px-6 lg:px-8 border-t border-terminal-border"
+      className="relative py-8 sm:py-12 lg:py-16 px-4 sm:px-6 lg:px-8 border-t border-terminal-border"
       role="contentinfo"
     >
       {/* Background */}
@@ -24,7 +24,7 @@ export default function Footer() {
 
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 lg:gap-12 mb-8 sm:mb-12">
           {/* Brand Section */}
           <div>
             <h3 className="orbitron text-xl font-bold text-neon-cyan mb-4 flex items-center gap-2">
