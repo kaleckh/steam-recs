@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
+import { verifyUserOwnership, isPremiumUser } from '@/lib/auth';
 
 interface GenreBreakdown {
   genre: string;
@@ -32,43 +32,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify user exists and check premium status
-    const supabase = await createClient();
-    const { data: { user: supabaseUser } } = await supabase.auth.getUser();
-
-    const userProfile = await prisma.userProfile.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        supabaseUserId: true,
-        subscriptionTier: true,
-        gamesAnalyzed: true,
-        totalPlaytimeHours: true,
-      },
-    });
-
-    if (!userProfile) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+    // Verify the authenticated user owns this profile
+    const { authorized, profile, errorResponse } = await verifyUserOwnership(userId);
+    if (!authorized || !profile) {
+      return errorResponse!;
     }
 
     // Check if user is premium
-    const isPremium = userProfile.subscriptionTier === 'premium';
-
-    if (!isPremium) {
+    if (!isPremiumUser(profile)) {
       return NextResponse.json(
         { error: 'Premium subscription required for analytics' },
         { status: 403 }
-      );
-    }
-
-    // Verify the requesting user owns this profile
-    if (supabaseUser && userProfile.supabaseUserId !== supabaseUser.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
       );
     }
 

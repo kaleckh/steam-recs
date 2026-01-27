@@ -1,17 +1,18 @@
 /**
  * User Subscription API Endpoint
  *
- * GET /api/user/subscription?userId=xxx - Check subscription status
- * POST /api/user/subscription - Update subscription (for testing/admin)
+ * GET /api/user/subscription?userId=xxx - Check subscription status (requires auth)
+ * POST /api/user/subscription - Update subscription (admin/Stripe webhook only)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { verifyUserOwnership } from '@/lib/auth';
 
 /**
  * GET /api/user/subscription?userId=xxx
  *
- * Check user's subscription status
+ * Check user's subscription status (requires authentication)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -23,6 +24,12 @@ export async function GET(request: NextRequest) {
         { error: 'Missing userId parameter' },
         { status: 400 }
       );
+    }
+
+    // Verify the authenticated user owns this profile
+    const { authorized, errorResponse } = await verifyUserOwnership(userId);
+    if (!authorized) {
+      return errorResponse!;
     }
 
     // Fetch user subscription info
@@ -93,71 +100,15 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/user/subscription
  *
- * Update subscription status (for testing/admin purposes)
- *
- * Body:
- * {
- *   userId: string,
- *   tier: 'free' | 'premium',
- *   expiresAt?: string (ISO date, only for premium)
- * }
+ * Update subscription status
+ * NOTE: This endpoint is disabled for direct access.
+ * Subscription changes should only happen via Stripe webhooks.
+ * Keeping for potential admin use in future with proper auth.
  */
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-
-    const { userId, tier, expiresAt } = body;
-
-    if (!userId || !tier) {
-      return NextResponse.json(
-        { error: 'Missing userId or tier' },
-        { status: 400 }
-      );
-    }
-
-    if (tier !== 'free' && tier !== 'premium') {
-      return NextResponse.json(
-        { error: 'Invalid tier. Must be "free" or "premium"' },
-        { status: 400 }
-      );
-    }
-
-    // Calculate expiration date for premium
-    let expirationDate: Date | null = null;
-
-    if (tier === 'premium') {
-      if (expiresAt) {
-        expirationDate = new Date(expiresAt);
-      } else {
-        // Default to 30 days from now
-        expirationDate = new Date();
-        expirationDate.setDate(expirationDate.getDate() + 30);
-      }
-    }
-
-    // Update subscription
-    await prisma.userProfile.update({
-      where: { id: userId },
-      data: {
-        subscriptionTier: tier,
-        subscriptionExpiresAt: expirationDate,
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: `Subscription updated to ${tier}`,
-      tier,
-      expiresAt: expirationDate ? expirationDate.toISOString() : null,
-    });
-  } catch (error) {
-    console.error('Update subscription error:', error);
-    return NextResponse.json(
-      {
-        error: 'Failed to update subscription',
-        details: error instanceof Error ? error.message : String(error),
-      },
-      { status: 500 }
-    );
-  }
+export async function POST() {
+  // Disabled for security - subscription changes should only happen via Stripe webhooks
+  return NextResponse.json(
+    { error: 'Subscription changes must be made through the billing portal' },
+    { status: 403 }
+  );
 }

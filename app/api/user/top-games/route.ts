@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { verifyUserOwnership } from '@/lib/auth';
 
 /**
  * GET /api/user/top-games?userId=xxx&limit=5
@@ -17,6 +18,12 @@ export async function GET(request: NextRequest) {
         { error: 'Missing userId parameter' },
         { status: 400 }
       );
+    }
+
+    // Verify the authenticated user owns this profile
+    const { authorized, errorResponse } = await verifyUserOwnership(userId);
+    if (!authorized) {
+      return errorResponse!;
     }
 
     // Fetch user's top games by playtime with game metadata

@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Steam Recommendations
+
+A personalized game recommendation engine that analyzes your Steam library to discover your next favorite game.
+
+## Features
+
+- **Personalized Recommendations**: Uses vector embeddings and AI to understand your gaming preferences based on your Steam library
+- **Daily Discovery**: Get a new curated game pick every day tailored to your taste
+- **Unplayed Gems**: Find hidden gems in your own library - games you own but haven't played that match your preferences
+- **Taste DNA**: See a breakdown of your gaming personality with genre analysis and play patterns
+- **Mood Quick-Match**: Filter recommendations by mood (Chill, Action, Story-Rich, etc.)
+- **Deep Cuts Filter**: Toggle between popular titles and hidden indie gems
+
+## Tech Stack
+
+- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS
+- **Backend**: Next.js API routes
+- **Database**: PostgreSQL with pgvector extension
+- **Auth**: Supabase (email/password + Google OAuth)
+- **AI/ML**: OpenAI embeddings for semantic game matching
+- **Payments**: Stripe (for premium features)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 18+
+- PostgreSQL with pgvector extension
+- Steam API key
+- Supabase project
+- (Optional) Stripe account for premium features
+
+### Environment Variables
+
+Create a `.env` file with:
+
+```env
+DATABASE_URL=postgresql://...
+STEAM_API_KEY=your_steam_api_key
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+OPENAI_API_KEY=your_openai_key
+STRIPE_SECRET_KEY=sk_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npx prisma migrate dev
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000) to see the app.
 
-## Learn More
+## How It Works
 
-To learn more about Next.js, take a look at the following resources:
+1. **Connect Steam**: Link your Steam account (must be public)
+2. **Analyze Library**: We analyze your played games to build a preference vector
+3. **Get Recommendations**: Our AI finds games similar to what you love
+4. **Refine Taste**: Like/dislike recommendations to improve accuracy (Premium)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## License
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT

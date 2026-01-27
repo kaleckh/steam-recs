@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { getHybridVector } from '@/lib/vector-learning';
+import { verifyUserOwnership } from '@/lib/auth';
 
 /**
  * POST /api/user/recommend
@@ -38,6 +39,12 @@ export async function POST(request: NextRequest) {
         { error: 'userId is required' },
         { status: 400 }
       );
+    }
+
+    // Verify the authenticated user owns this profile
+    const { authorized, errorResponse } = await verifyUserOwnership(body.userId);
+    if (!authorized) {
+      return errorResponse!;
     }
 
     const limit = Math.min(body.limit || 20, 100);

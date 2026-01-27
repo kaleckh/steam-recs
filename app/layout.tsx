@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
 import TopNav from "@/components/navigation/TopNav";
+import Footer from "@/components/ui/Footer";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 const geistSans = Geist({
@@ -31,10 +32,15 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <Suspense fallback={<div className="h-14 bg-[#0a0a0f] border-b border-terminal-border" />}>
-            <TopNav />
-          </Suspense>
-          {children}
+          <div className="min-h-screen flex flex-col">
+            <Suspense fallback={<div className="h-14 bg-[#0a0a0f] border-b border-terminal-border" />}>
+              <TopNav />
+            </Suspense>
+            <main className="flex-1">
+              {children}
+            </main>
+            <Footer />
+          </div>
         </AuthProvider>
       </body>
     </html>

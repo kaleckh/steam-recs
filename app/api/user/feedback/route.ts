@@ -13,6 +13,7 @@ import {
   deleteFeedback,
   type FeedbackType,
 } from '@/lib/vector-learning';
+import { verifyUserOwnership } from '@/lib/auth';
 
 /**
  * POST /api/user/feedback
@@ -38,6 +39,12 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid or missing userId' },
         { status: 400 }
       );
+    }
+
+    // Verify the authenticated user owns this profile
+    const { authorized, errorResponse } = await verifyUserOwnership(userId);
+    if (!authorized) {
+      return errorResponse!;
     }
 
     if (!appId || typeof appId !== 'number') {
@@ -122,6 +129,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Verify the authenticated user owns this profile
+    const { authorized, errorResponse } = await verifyUserOwnership(userId);
+    if (!authorized) {
+      return errorResponse!;
+    }
+
     // Fetch feedback with full game details including metadata
     const { prisma } = await import('@/lib/prisma');
 
@@ -197,6 +210,12 @@ export async function DELETE(request: NextRequest) {
         { error: 'Missing userId or appId in request body' },
         { status: 400 }
       );
+    }
+
+    // Verify the authenticated user owns this profile
+    const { authorized, errorResponse } = await verifyUserOwnership(userId);
+    if (!authorized) {
+      return errorResponse!;
     }
 
     const appId = BigInt(appIdStr);

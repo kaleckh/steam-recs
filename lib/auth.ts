@@ -153,3 +153,38 @@ export function unauthorized(message = 'Unauthorized') {
 export function forbidden(message = 'Forbidden') {
   return NextResponse.json({ error: message }, { status: 403 });
 }
+
+/**
+ * Verify that the authenticated user owns the requested profile.
+ * Returns the profile if authorized, or an error response if not.
+ */
+export async function verifyUserOwnership(requestedUserId: string): Promise<{
+  authorized: boolean;
+  profile: UserProfile | null;
+  errorResponse: NextResponse | null;
+}> {
+  const { profile, error } = await getAuthenticatedUser();
+
+  if (error || !profile) {
+    return {
+      authorized: false,
+      profile: null,
+      errorResponse: unauthorized('Authentication required'),
+    };
+  }
+
+  // Check if the authenticated user owns this profile
+  if (profile.id !== requestedUserId) {
+    return {
+      authorized: false,
+      profile: null,
+      errorResponse: forbidden('You can only access your own data'),
+    };
+  }
+
+  return {
+    authorized: true,
+    profile,
+    errorResponse: null,
+  };
+}

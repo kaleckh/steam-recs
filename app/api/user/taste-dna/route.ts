@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { verifyUserOwnership } from '@/lib/auth';
 
 /**
  * GET /api/user/taste-dna
@@ -20,6 +21,12 @@ export async function GET(request: NextRequest) {
         { success: false, error: 'userId is required' },
         { status: 400 }
       );
+    }
+
+    // Verify the authenticated user owns this profile
+    const { authorized, errorResponse } = await verifyUserOwnership(userId);
+    if (!authorized) {
+      return errorResponse!;
     }
 
     // Get user profile
