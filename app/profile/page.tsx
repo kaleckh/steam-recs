@@ -11,14 +11,9 @@ import {
 import SteamInput from '@/components/profile/SteamInput';
 import LoadingState from '@/components/profile/LoadingState';
 import ErrorDisplay from '@/components/profile/ErrorDisplay';
-import { ProfileTab } from '@/components/navigation/TopNav';
-import ForYouTab from '@/components/profile/tabs/ForYouTab';
-import AISearchTab from '@/components/profile/tabs/AISearchTab';
 import AnalyticsTab from '@/components/profile/tabs/AnalyticsTab';
-import LibraryTab from '@/components/profile/tabs/LibraryTab';
 import UpgradeModal from '@/components/premium/UpgradeModal';
 import TasteDNA from '@/components/profile/TasteDNA';
-import UnplayedGems from '@/components/profile/UnplayedGems';
 import { useAuth, CachedRecommendations } from '@/contexts/AuthContext';
 
 type ProfileState =
@@ -41,13 +36,12 @@ function ProfileContent() {
   const { user, profile, isPremium, isLoading: authLoading, refreshProfile, cachedRecommendations, setCachedRecommendations, signOut } = useAuth();
 
   const [state, setState] = useState<ProfileState>({ stage: 'loading' });
-  const [filters, setFilters] = useState<RecommendationFilters>({
+  const [filters] = useState<RecommendationFilters>({
     limit: 20,
     excludeOwned: true,
     minReviewScore: 0,
     popularityScore: 50,
   });
-  const [isApplyingFilters, setIsApplyingFilters] = useState(false);
   const [ratingsCount, setRatingsCount] = useState(0);
   const [topGames, setTopGames] = useState<Array<{
     appId: string;
@@ -60,13 +54,10 @@ function ProfileContent() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isResetTasteModalOpen, setIsResetTasteModalOpen] = useState(false);
   const [isResettingTaste, setIsResettingTaste] = useState(false);
-  const [isRefreshingRecs, setIsRefreshingRecs] = useState(false);
 
-  // Get active tab from URL params
+  // Get active tab from URL params (only analytics tab remains on profile page)
   const tabParam = searchParams.get('tab');
-  const activeTab: ProfileTab = (tabParam === 'ai-search' || tabParam === 'analytics' || tabParam === 'library')
-    ? tabParam
-    : 'for-you';
+  const showAnalytics = tabParam === 'analytics';
 
   const fetchTopGamesData = useCallback(async (userId: string) => {
     try {
@@ -253,51 +244,6 @@ function ProfileContent() {
     }
   };
 
-  const handleFilterChange = async (newFilters: RecommendationFilters) => {
-    if (!profile?.id) return;
-
-    setFilters(newFilters);
-    setIsApplyingFilters(true);
-
-    if (state.stage === 'recommendations') {
-      try {
-        const [result] = await Promise.all([
-          getRecommendations(profile.id, newFilters),
-          new Promise(resolve => setTimeout(resolve, 500)),
-        ]);
-
-        if (result.success && result.recommendations) {
-          // Update cache with new filtered results
-          setCachedRecommendations({
-            recommendations: result.recommendations,
-            gamesAnalyzed: state.gamesAnalyzed,
-            totalPlaytimeHours: state.totalPlaytimeHours,
-            lastUpdated: state.lastUpdated,
-            topGames: topGames,
-            ratingsCount: ratingsCount,
-          });
-
-          setState({
-            stage: 'recommendations',
-            recommendations: result.recommendations,
-            gamesAnalyzed: state.gamesAnalyzed,
-            totalPlaytimeHours: state.totalPlaytimeHours,
-            lastUpdated: state.lastUpdated,
-          });
-        } else {
-          setState({
-            stage: 'error',
-            error: getFriendlyErrorMessage(result.error || 'Failed to update recommendations'),
-          });
-        }
-      } catch (error) {
-        console.error('Failed to apply filters:', error);
-      }
-    }
-
-    setIsApplyingFilters(false);
-  };
-
   const handleResync = async () => {
     if (!profile?.steamId) return;
     // Clear cache on resync
@@ -416,28 +362,26 @@ function ProfileContent() {
         {/* Loading Recommendations */}
         {state.stage === 'loading_recommendations' && (
           <div className="space-y-8">
-            {activeTab !== 'ai-search' && (
-              <div className="flex justify-center">
-                <div className="terminal-box rounded-lg w-full max-w-6xl overflow-hidden">
-                  <div className="terminal-header">
-                    <span className="text-gray-400 text-sm font-mono ml-16">USER_PROFILE.exe</span>
-                  </div>
-                  <div className="p-8">
-                    <div className="flex items-start justify-between mb-8">
-                      <div className="flex items-center gap-6">
-                        <div className="w-20 h-20 bg-terminal-light animate-pulse rounded-lg border-2 border-terminal-border" />
-                        <div className="space-y-3">
-                          <div className="h-7 w-40 bg-terminal-light rounded animate-pulse" />
-                          <div className="h-4 w-56 bg-terminal-light rounded animate-pulse" />
-                          <div className="h-3 w-32 bg-terminal-light rounded animate-pulse" />
-                        </div>
+            <div className="flex justify-center">
+              <div className="terminal-box rounded-lg w-full max-w-6xl overflow-hidden">
+                <div className="terminal-header">
+                  <span className="text-gray-400 text-sm font-mono ml-16">USER_PROFILE.exe</span>
+                </div>
+                <div className="p-8">
+                  <div className="flex items-start justify-between mb-8">
+                    <div className="flex items-center gap-6">
+                      <div className="w-20 h-20 bg-terminal-light animate-pulse rounded-lg border-2 border-terminal-border" />
+                      <div className="space-y-3">
+                        <div className="h-7 w-40 bg-terminal-light rounded animate-pulse" />
+                        <div className="h-4 w-56 bg-terminal-light rounded animate-pulse" />
+                        <div className="h-3 w-32 bg-terminal-light rounded animate-pulse" />
                       </div>
-                      <div className="h-12 w-44 bg-terminal-light rounded animate-pulse" />
                     </div>
+                    <div className="h-12 w-44 bg-terminal-light rounded animate-pulse" />
                   </div>
                 </div>
               </div>
-            )}
+            </div>
 
             <div className="flex justify-center py-12">
               <div className="terminal-box rounded-lg p-8 flex flex-col items-center space-y-4">
@@ -480,8 +424,7 @@ function ProfileContent() {
         {state.stage === 'recommendations' && profile && (
           <div className="space-y-8 stagger-children">
             {/* User Profile Card */}
-            {activeTab !== 'ai-search' && (
-              <div className="flex justify-center">
+            <div className="flex justify-center">
                 <div className="terminal-box rounded-lg w-full max-w-6xl overflow-hidden">
                   <div className="terminal-header">
                     <span className="text-gray-400 text-sm font-mono ml-16">USER_PROFILE.exe</span>
@@ -612,49 +555,15 @@ function ProfileContent() {
                   </div>
                 </div>
               </div>
-            )}
 
-            {/* Unplayed Gems Section */}
-            {activeTab === 'for-you' && (
-              <UnplayedGems userId={profile.id} />
-            )}
-
-            {/* Tab Content */}
-            {activeTab === 'for-you' && (
-              <ForYouTab
-                userId={profile.id}
-                recommendations={state.recommendations}
-                gamesAnalyzed={state.gamesAnalyzed}
-                ratingsCount={ratingsCount}
-                filters={filters}
-                onFilterChange={handleFilterChange}
-                isApplyingFilters={isApplyingFilters}
-                isPremium={isPremium}
-                onRefresh={async () => {
-                  setIsRefreshingRecs(true);
-                  setCachedRecommendations(null);
-                  await loadRecommendations(true);
-                  setIsRefreshingRecs(false);
-                }}
-                isRefreshing={isRefreshingRecs}
-              />
-            )}
-
-            {activeTab === 'ai-search' && (
-              <AISearchTab userId={profile.id} isPremium={isPremium} />
-            )}
-
-            {activeTab === 'analytics' && (
+            {/* Analytics Section - shown when ?tab=analytics */}
+            {showAnalytics && (
               <AnalyticsTab
                 userId={profile.id}
                 gamesAnalyzed={state.gamesAnalyzed}
                 totalPlaytimeHours={state.totalPlaytimeHours}
                 isPremium={isPremium}
               />
-            )}
-
-            {activeTab === 'library' && (
-              <LibraryTab userId={profile.id} />
             )}
           </div>
         )}
