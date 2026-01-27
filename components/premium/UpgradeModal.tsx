@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { PLANS } from '@/lib/plans';
+import { CREDIT_PACKAGES, CreditPackageId } from '@/lib/beta-limits';
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -11,7 +11,7 @@ interface UpgradeModalProps {
 }
 
 export default function UpgradeModal({ isOpen, onClose, userId }: UpgradeModalProps) {
-  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('monthly');
+  const [selectedPackage, setSelectedPackage] = useState<CreditPackageId>('starter');
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -33,13 +33,17 @@ export default function UpgradeModal({ isOpen, onClose, userId }: UpgradeModalPr
 
   if (!isOpen || !mounted) return null;
 
-  const handleUpgrade = async () => {
+  const handlePurchase = async () => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, priceType: selectedPlan }),
+        body: JSON.stringify({
+          userId,
+          packageId: selectedPackage,
+          mode: 'payment', // One-time payment, not subscription
+        }),
       });
 
       const data = await response.json();
@@ -57,7 +61,8 @@ export default function UpgradeModal({ isOpen, onClose, userId }: UpgradeModalPr
     }
   };
 
-  const yearlyDiscount = Math.round((1 - (PLANS.premium.yearlyPrice / (PLANS.premium.monthlyPrice * 12))) * 100);
+  const packages = Object.values(CREDIT_PACKAGES);
+  const selected = CREDIT_PACKAGES[selectedPackage];
 
   const modalContent = (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center">
@@ -71,7 +76,7 @@ export default function UpgradeModal({ isOpen, onClose, userId }: UpgradeModalPr
       <div className="relative terminal-box rounded-lg max-w-lg w-full mx-4 overflow-hidden animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="terminal-header sticky top-0 z-10">
-          <span className="text-gray-400 text-sm font-mono ml-16">UPGRADE_TO_PRO.exe</span>
+          <span className="text-gray-400 text-sm font-mono ml-16">BUY_CREDITS.exe</span>
           <button
             onClick={onClose}
             className="absolute right-4 top-3 text-gray-500 hover:text-white transition-colors"
@@ -87,68 +92,99 @@ export default function UpgradeModal({ isOpen, onClose, userId }: UpgradeModalPr
           <div className="text-center mb-6 sm:mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-neon-orange/20 to-neon-cyan/20 border-2 border-neon-orange mb-4">
               <svg className="w-8 h-8 text-neon-orange" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
             <h2 className="orbitron text-2xl font-bold text-white mb-2">
-              UNLOCK PRO FEATURES
+              GET MORE SEARCHES
             </h2>
             <p className="text-gray-400 font-mono text-sm">
-              Get unlimited access to all premium features
+              Purchase AI search credits - use them anytime, they never expire
             </p>
           </div>
 
-          {/* Plan Toggle */}
-          <div className="flex gap-3 mb-6">
-            <button
-              onClick={() => setSelectedPlan('monthly')}
-              className={`flex-1 p-4 rounded-lg border-2 transition-all ${
-                selectedPlan === 'monthly'
-                  ? 'border-neon-cyan bg-neon-cyan/10'
-                  : 'border-terminal-border hover:border-gray-600'
-              }`}
-            >
-              <div className="text-sm font-mono text-gray-400 mb-1">Monthly</div>
-              <div className="orbitron text-2xl font-bold text-white">
-                ${PLANS.premium.monthlyPrice}
-                <span className="text-sm text-gray-500">/mo</span>
-              </div>
-            </button>
+          {/* Package Selection */}
+          <div className="space-y-3 mb-6">
+            {packages.map((pkg) => {
+              const isSelected = selectedPackage === pkg.id;
+              const pricePerSearch = (pkg.price / 100 / pkg.credits).toFixed(2);
 
-            <button
-              onClick={() => setSelectedPlan('yearly')}
-              className={`flex-1 p-4 rounded-lg border-2 transition-all relative ${
-                selectedPlan === 'yearly'
-                  ? 'border-neon-green bg-neon-green/10'
-                  : 'border-terminal-border hover:border-gray-600'
-              }`}
-            >
-              <div className="absolute -top-2 right-2 px-2 py-0.5 bg-neon-green text-black text-[10px] font-mono font-bold rounded">
-                SAVE {yearlyDiscount}%
-              </div>
-              <div className="text-sm font-mono text-gray-400 mb-1">Yearly</div>
-              <div className="orbitron text-2xl font-bold text-white">
-                ${PLANS.premium.yearlyPrice}
-                <span className="text-sm text-gray-500">/yr</span>
-              </div>
-            </button>
+              return (
+                <button
+                  key={pkg.id}
+                  onClick={() => setSelectedPackage(pkg.id as CreditPackageId)}
+                  className={`w-full p-4 rounded-lg border-2 transition-all text-left relative ${
+                    isSelected
+                      ? 'border-neon-cyan bg-neon-cyan/10'
+                      : 'border-terminal-border hover:border-gray-600'
+                  }`}
+                >
+                  {pkg.id === 'power' && (
+                    <div className="absolute -top-2 right-3 px-2 py-0.5 bg-neon-green text-black text-[10px] font-mono font-bold rounded">
+                      BEST VALUE
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-mono text-white font-bold">{pkg.name}</div>
+                      <div className="text-gray-400 font-mono text-sm">
+                        {pkg.credits} AI searches
+                      </div>
+                      <div className="text-gray-500 font-mono text-xs mt-1">
+                        ${pricePerSearch} per search
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="orbitron text-2xl font-bold text-white">
+                        {pkg.priceDisplay}
+                      </div>
+                      {pkg.id === 'power' && (
+                        <div className="text-neon-green font-mono text-xs">
+                          Save 25%
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Features */}
-          <div className="space-y-3 mb-8">
-            {PLANS.premium.features.map((feature, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-neon-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          {/* What you get */}
+          <div className="bg-terminal-dark rounded-lg p-4 mb-6">
+            <div className="text-gray-400 font-mono text-xs mb-3">WHAT YOU GET:</div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <svg className="w-4 h-4 text-neon-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="text-gray-300 font-mono text-sm">{feature}</span>
+                <span className="text-gray-300 font-mono">AI-powered game discovery</span>
               </div>
-            ))}
+              <div className="flex items-center gap-2 text-sm">
+                <svg className="w-4 h-4 text-neon-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-gray-300 font-mono">Personalized recommendations</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <svg className="w-4 h-4 text-neon-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-gray-300 font-mono">Credits never expire</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <svg className="w-4 h-4 text-neon-green flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-gray-300 font-mono">No subscription required</span>
+              </div>
+            </div>
           </div>
 
           {/* CTA */}
           <button
-            onClick={handleUpgrade}
+            onClick={handlePurchase}
             disabled={isLoading}
             className="w-full btn-arcade rounded-lg py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -159,14 +195,13 @@ export default function UpgradeModal({ isOpen, onClose, userId }: UpgradeModalPr
               </span>
             ) : (
               <span>
-                UPGRADE NOW - ${selectedPlan === 'yearly' ? PLANS.premium.yearlyPrice : PLANS.premium.monthlyPrice}
-                {selectedPlan === 'yearly' ? '/year' : '/month'}
+                BUY {selected.credits} SEARCHES - {selected.priceDisplay}
               </span>
             )}
           </button>
 
           <p className="text-center text-gray-600 font-mono text-xs mt-4">
-            Cancel anytime. Secure payment via Stripe.
+            One-time purchase. Secure payment via Stripe.
           </p>
         </div>
       </div>

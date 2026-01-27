@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SearchFilters {
   minReviewScore: number;
@@ -54,6 +55,14 @@ interface CollectedAnswer {
   answer: string;
 }
 
+interface SearchCredits {
+  purchasedCredits: number;
+  freeSearchesUsed: number;
+  freeSearchesRemaining: number;
+  totalRemaining: number;
+  freeLimit: number;
+}
+
 interface SearchResponse {
   success: boolean;
   type: string;
@@ -67,13 +76,15 @@ interface SearchResponse {
   };
   error?: string;
   conversation?: ConversationData;
+  searchCredits?: SearchCredits | null;
 }
 
 function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { profile } = useAuth();
   const query = searchParams.get('q') || '';
-  const userId = searchParams.get('userId') || undefined;
+  const userId = profile?.id;
 
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,10 +93,66 @@ function SearchContent() {
   const [conversation, setConversation] = useState<ConversationData | null>(null);
   const [followUpInput, setFollowUpInput] = useState('');
   const [loadingWordIndex, setLoadingWordIndex] = useState(0);
+  const [hasRestoredState, setHasRestoredState] = useState(false);
 
   // Multi-question refinement state
   const [collectedAnswers, setCollectedAnswers] = useState<CollectedAnswer[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+
+  // Credit tracking
+  const [searchCredits, setSearchCredits] = useState<SearchCredits | null>(null);
+  const [creditsLoading, setCreditsLoading] = useState(true);
+
+  // Restore state from localStorage on mount (client-side only)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('search_last_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.results?.length > 0) {
+          setResults(parsed.results);
+          setConversation(parsed.conversation || null);
+          if (!query && parsed.query) {
+            setSearchInput(parsed.query);
+          }
+        }
+      }
+    } catch {}
+    setHasRestoredState(true);
+  }, [query]);
+
+  // Fetch credit status on mount
+  useEffect(() => {
+    if (!userId) {
+      setCreditsLoading(false);
+      return;
+    }
+
+    setCreditsLoading(true);
+    fetch(`/api/user/credits?userId=${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (!data.error) {
+          setSearchCredits(data);
+        }
+      })
+      .catch(console.error)
+      .finally(() => setCreditsLoading(false));
+  }, [userId]);
+
+  // Save state to localStorage for tab persistence
+  useEffect(() => {
+    if (results.length > 0 && (query || searchInput)) {
+      try {
+        localStorage.setItem('search_last_state', JSON.stringify({
+          results,
+          conversation,
+          query: query || searchInput,
+          timestamp: Date.now(),
+        }));
+      } catch {}
+    }
+  }, [results, conversation, query, searchInput]);
 
   // Filter state
   const [filters, setFilters] = useState<SearchFilters>({
@@ -156,11 +223,40 @@ function SearchContent() {
     return () => clearInterval(interval);
   }, [isLoading]);
 
+  // Helper to get cache key for a query
+  const getCacheKey = (q: string) => `search_cache_${q.toLowerCase().trim()}`;
+
   useEffect(() => {
     async function performSearch() {
+      // Wait for localStorage restore to complete first
+      if (!hasRestoredState) {
+        return;
+      }
+
+      // If no query in URL, just use whatever state we have (from localStorage)
       if (!query) {
         setIsLoading(false);
         return;
+      }
+
+      const cacheKey = getCacheKey(query);
+
+      // Check localStorage for cached results for THIS query
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const cachedData = JSON.parse(cached);
+          // Check if cache is less than 1 hour old
+          if (cachedData.timestamp && Date.now() - cachedData.timestamp < 60 * 60 * 1000) {
+            setResults(cachedData.games || []);
+            setConversation(cachedData.conversation || null);
+            setSearchInput(query);
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch {
+        // Cache read failed, continue with fetch
       }
 
       // Cancel any existing search
@@ -192,6 +288,20 @@ function SearchContent() {
         if (data.success) {
           setResults(data.games);
           setConversation(data.conversation || null);
+          if (data.searchCredits) {
+            setSearchCredits(data.searchCredits);
+          }
+
+          // Save to localStorage
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify({
+              games: data.games,
+              conversation: data.conversation,
+              timestamp: Date.now(),
+            }));
+          } catch {
+            // Cache write failed, continue silently
+          }
         } else {
           setError(data.error || 'Search failed');
           setConversation(null);
@@ -215,7 +325,7 @@ function SearchContent() {
         abortControllerRef.current.abort();
       }
     };
-  }, [query, userId]);
+  }, [query, userId, hasRestoredState]);
 
   const handleCancelSearch = () => {
     if (abortControllerRef.current) {
@@ -311,6 +421,52 @@ function SearchContent() {
               SEARCH
             </button>
           </form>
+
+          {/* Credit Usage Bar */}
+          {userId && (
+            <div className="mt-3 flex items-center gap-3">
+              <div className="flex-1 max-w-xs">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] sm:text-xs font-mono text-gray-500">
+                    {creditsLoading ? (
+                      'Loading credits...'
+                    ) : searchCredits ? (
+                      `Free searches: ${searchCredits.freeSearchesUsed}/${searchCredits.freeLimit}`
+                    ) : (
+                      'Free searches: 0/6'
+                    )}
+                  </span>
+                  {searchCredits && searchCredits.purchasedCredits > 0 && (
+                    <span className="text-[10px] sm:text-xs font-mono text-neon-green">
+                      +{searchCredits.purchasedCredits} credits
+                    </span>
+                  )}
+                </div>
+                <div className="h-1.5 bg-terminal-dark border border-terminal-border rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-500 ${
+                      !searchCredits ? 'bg-neon-cyan' :
+                      searchCredits.freeSearchesUsed >= searchCredits.freeLimit
+                        ? 'bg-red-500'
+                        : searchCredits.freeSearchesUsed >= searchCredits.freeLimit - 2
+                          ? 'bg-neon-orange'
+                          : 'bg-neon-cyan'
+                    }`}
+                    style={{
+                      width: searchCredits
+                        ? `${Math.min(100, (searchCredits.freeSearchesUsed / searchCredits.freeLimit) * 100)}%`
+                        : '0%',
+                    }}
+                  />
+                </div>
+              </div>
+              {searchCredits && searchCredits.totalRemaining <= 2 && searchCredits.purchasedCredits === 0 && (
+                <span className="text-[10px] sm:text-xs font-mono text-neon-orange animate-pulse">
+                  Running low!
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -432,12 +588,7 @@ function SearchContent() {
                 ].map((example, i) => (
                   <button
                     key={i}
-                    onClick={() => {
-                      setSearchInput(example);
-                      const params = new URLSearchParams({ q: example });
-                      if (userId) params.set('userId', userId);
-                      router.push(`/search?${params.toString()}`);
-                    }}
+                    onClick={() => setSearchInput(example)}
                     className="block w-full text-left px-3 sm:px-4 py-2 bg-terminal-dark border border-terminal-border rounded text-gray-400 font-mono text-xs sm:text-sm hover:border-neon-cyan hover:text-neon-cyan transition-all"
                   >
                     "{example}"

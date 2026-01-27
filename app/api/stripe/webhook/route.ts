@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
+import { addPurchasedCredits } from '@/lib/beta-limits';
 import Stripe from 'stripe';
 
 export async function POST(request: NextRequest) {
@@ -29,11 +30,39 @@ export async function POST(request: NextRequest) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.userId;
+        const credits = session.metadata?.credits;
+        const packageId = session.metadata?.packageId;
         const subscriptionId = session.subscription as string;
         const customerEmail = session.customer_details?.email;
 
-        console.log('Checkout completed:', { userId, subscriptionId, customerEmail });
+        console.log('Checkout completed:', {
+          userId,
+          credits,
+          packageId,
+          subscriptionId,
+          mode: session.mode,
+          customerEmail,
+        });
 
+        // Handle credit purchase (one-time payment)
+        if (session.mode === 'payment' && credits && userId) {
+          const creditCount = parseInt(credits, 10);
+
+          if (creditCount > 0) {
+            console.log(`Adding ${creditCount} credits to user ${userId}`);
+
+            const result = await addPurchasedCredits(userId, creditCount);
+
+            if (result.success) {
+              console.log(`Successfully added credits. New balance: ${result.newBalance}`);
+            } else {
+              console.error('Failed to add credits');
+            }
+          }
+          break;
+        }
+
+        // Handle subscription (legacy support)
         if (subscriptionId) {
           const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
           // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import { generateOpenAIEmbedding } from '@/lib/embeddings';
+import { checkSearchLimit, consumeSearchCredit, FREE_SEARCH_LIMIT, CREDIT_PACKAGES } from '@/lib/beta-limits';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
@@ -389,6 +390,15 @@ export async function GET(request: NextRequest) {
 
     // AI-powered search - RAG with GPT-4o-mini (with conversational refinement)
     if (searchType === 'ai') {
+      // Check search credit limit (only for logged-in users)
+      let creditStatus: Awaited<ReturnType<typeof checkSearchLimit>> | null = null;
+      if (userId) {
+        creditStatus = await checkSearchLimit(userId);
+        if (!creditStatus.allowed && creditStatus.errorResponse) {
+          return creditStatus.errorResponse;
+        }
+      }
+
       // Build the full search query from original + refinements
       const fullQuery = conversationContext.refinements.length > 0
         ? `${conversationContext.originalQuery} | ${conversationContext.refinements.join(' | ')}`
@@ -558,6 +568,12 @@ export async function GET(request: NextRequest) {
 
       const systemPrompt = `You are a game recommendation expert. Given a user's search query and a list of candidate games, select UP TO ${resultLimit} games that match what the user is looking for.
 
+IMPORTANT CONTEXT:
+- ALL games in this list are digital Steam PC games (not physical products)
+- When users reference board games (like "Risk" or "Catan"), recommend digital strategy games with similar mechanics
+- "Not a board game" means they want video games, which ALL these candidates are - interpret generously
+- Be lenient - if a game captures the spirit of what they want, include it
+
 Consider:
 - Gameplay style, mechanics, and "vibes" the user is describing
 - Genre preferences (explicit or implied)
@@ -572,7 +588,7 @@ Return a JSON object with a "results" array containing objects with:
 Example response:
 {"results": [{"appId": "123456", "reason": "Cozy farming sim with light combat mechanics"}, ...]}
 
-IMPORTANT: For broad queries (like "co-op games" or "relaxing games"), include many results - aim for ${resultLimit} games. Only return fewer results for very specific queries where few games truly match.`;
+CRITICAL: Always return at least 5-10 games unless the query is impossibly specific. For broad queries, aim for ${resultLimit} games. An empty result set is almost never correct - there's usually something that fits.`;
 
       const userPrompt = `User's search: "${query}"
 
@@ -628,6 +644,12 @@ Select the best matches and explain why each fits the user's request.`;
 
       console.log(`[AI Search] Returning ${results.length} results`);
 
+      // Consume search credit for logged-in users (only on first round to avoid double-counting refinements)
+      let creditConsumed = null;
+      if (userId && conversationContext.round === 1) {
+        creditConsumed = await consumeSearchCredit(userId);
+      }
+
       // Build context for next round (frontend sends this back)
       const nextContext: ConversationContext = {
         originalQuery: conversationContext.originalQuery || query,
@@ -664,6 +686,17 @@ Select the best matches and explain why each fits the user's request.`;
           // Context to send back with next request
           context: nextContext,
         },
+        // Search credits status (for UI display)
+        searchCredits: creditStatus ? {
+          purchasedCredits: creditConsumed ? creditConsumed.purchasedCreditsRemaining : creditStatus.purchasedCredits,
+          freeSearchesUsed: creditStatus.freeSearchesUsed + (creditConsumed && !creditConsumed.usedPurchasedCredit ? 1 : 0),
+          freeSearchesRemaining: creditConsumed ? creditConsumed.freeSearchesRemaining : creditStatus.freeSearchesRemaining,
+          totalRemaining: creditConsumed
+            ? creditConsumed.purchasedCreditsRemaining + creditConsumed.freeSearchesRemaining
+            : creditStatus.totalSearchesRemaining,
+          freeLimit: FREE_SEARCH_LIMIT,
+          packages: CREDIT_PACKAGES,
+        } : null,
         usage: {
           promptTokens: completion.usage?.prompt_tokens,
           completionTokens: completion.usage?.completion_tokens,

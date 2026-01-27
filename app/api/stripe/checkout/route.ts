@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getStripe, STRIPE_PRICE_IDS } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
+import { CREDIT_PACKAGES, CreditPackageId } from '@/lib/beta-limits';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,22 +11,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
     }
 
-    const { userId, priceType } = await request.json();
+    const { userId, packageId } = await request.json();
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID required' }, { status: 400 });
     }
 
-    const priceId = priceType === 'yearly'
-      ? STRIPE_PRICE_IDS.yearly
-      : STRIPE_PRICE_IDS.monthly;
-
-    if (!priceId) {
-      const missingVar = priceType === 'yearly' ? 'STRIPE_PRICE_YEARLY' : 'STRIPE_PRICE_MONTHLY';
-      console.error(`Missing ${missingVar} env var. Current value: "${priceId}"`);
-      console.error('Available price IDs:', STRIPE_PRICE_IDS);
-      return NextResponse.json({ error: `${missingVar} not configured` }, { status: 500 });
+    if (!packageId || !CREDIT_PACKAGES[packageId as CreditPackageId]) {
+      return NextResponse.json({ error: 'Invalid package' }, { status: 400 });
     }
+
+    const selectedPackage = CREDIT_PACKAGES[packageId as CreditPackageId];
 
     // Get or create Stripe customer
     const user = await prisma.userProfile.findUnique({
@@ -40,6 +36,7 @@ export async function POST(request: NextRequest) {
 
     if (!customerId) {
       const customer = await getStripe().customers.create({
+        email: user.email || undefined,
         metadata: {
           userId: userId,
           steamId: user.steamId || '',
@@ -53,22 +50,31 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create checkout session
+    // Create checkout session for one-time payment
     const appUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const session = await getStripe().checkout.sessions.create({
       customer: customerId,
-      mode: 'subscription',
+      mode: 'payment', // One-time payment, not subscription
       payment_method_types: ['card'],
       line_items: [
         {
-          price: priceId,
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `${selectedPackage.name} - ${selectedPackage.credits} AI Searches`,
+              description: `${selectedPackage.credits} AI-powered game searches. Credits never expire.`,
+            },
+            unit_amount: selectedPackage.price, // Price in cents
+          },
           quantity: 1,
         },
       ],
-      success_url: `${appUrl}/profile?tab=analytics&upgraded=true`,
-      cancel_url: `${appUrl}/profile?tab=analytics`,
+      success_url: `${appUrl}/search?purchased=true&credits=${selectedPackage.credits}`,
+      cancel_url: `${appUrl}/search`,
       metadata: {
         userId: userId,
+        packageId: packageId,
+        credits: selectedPackage.credits.toString(),
       },
     });
 

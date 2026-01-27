@@ -54,7 +54,11 @@ model UserProfile {
   // Learned vector (dynamically updated from feedback - PREMIUM ONLY)
   learnedVector      Unsupported("vector(1536)")? @map("learned_vector")
 
-  // Subscription tier
+  // Search credits (pay-per-use model)
+  searchCredits      Int                      @default(0) @map("search_credits") // Purchased credits remaining
+  totalCreditsPurchased Int                   @default(0) @map("total_credits_purchased") // Lifetime credits purchased
+
+  // Legacy subscription fields (kept for backwards compatibility)
   subscriptionTier   String                   @default("free") @map("subscription_tier") // 'free' or 'premium'
   subscriptionExpiresAt DateTime?             @map("subscription_expires_at")
 
@@ -70,6 +74,10 @@ model UserProfile {
   // Feedback stats
   feedbackLikesCount Int                      @default(0) @map("feedback_likes_count")
   feedbackDislikesCount Int                   @default(0) @map("feedback_dislikes_count")
+
+  // Beta testing limits
+  betaQueriesUsed    Int                      @default(0) @map("beta_queries_used")
+  betaQueriesResetAt DateTime?                @map("beta_queries_reset_at") // Optional: for daily/weekly resets
 
   // User preferences and filters
   preferences        Json?                    @db.JsonB // Custom user preferences (genres to boost, etc.)

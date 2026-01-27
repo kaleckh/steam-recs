@@ -164,6 +164,16 @@ export default function TopNav() {
                       {/* Menu Items */}
                       <div className="py-1">
                         <Link
+                          href="/profile"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-terminal-light font-mono"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                          My Profile
+                        </Link>
+                        <Link
                           href="/profile?tab=analytics"
                           onClick={() => setIsUserMenuOpen(false)}
                           className="flex items-center gap-2 px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-terminal-light font-mono"
@@ -179,7 +189,7 @@ export default function TopNav() {
                           )}
                         </Link>
                         <Link
-                          href="/profile"
+                          href="/profile?tab=settings"
                           onClick={() => setIsUserMenuOpen(false)}
                           className="flex items-center gap-2 px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-terminal-light font-mono"
                         >
