@@ -54,6 +54,13 @@ export default function GameVideoSection({ game }: GameVideoSectionProps) {
         hls.loadSource(hlsUrl);
         hls.attachMedia(video);
 
+        // Autoplay when manifest is ready
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          video.play().catch(() => {
+            // Autoplay blocked - user will need to click
+          });
+        });
+
         hls.on(Hls.Events.ERROR, (_event, data) => {
           if (data.fatal) {
             console.error('HLS fatal error:', data);
@@ -61,6 +68,7 @@ export default function GameVideoSection({ game }: GameVideoSectionProps) {
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = hlsUrl;
+        video.play().catch(() => {});
       }
     }
 
@@ -143,6 +151,7 @@ export default function GameVideoSection({ game }: GameVideoSectionProps) {
                 key={selectedMediaIndex}
                 className="w-full h-full"
                 controls
+                autoPlay
                 muted
                 playsInline
                 poster={(currentMedia as any).thumbnail}

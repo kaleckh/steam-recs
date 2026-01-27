@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import GameVideoSection from '@/components/game/GameVideoSection';
 import GameInfoSidebar from '@/components/game/GameInfoSidebar';
 import GameDescription from '@/components/game/GameDescription';
-import GameTabs from '@/components/game/GameTabs';
 import SimilarGames from '@/components/game/SimilarGames';
 import LoadingSpinner from '@/components/game/LoadingSpinner';
 
@@ -185,7 +184,6 @@ export default function GameDetailPage() {
           <div className="space-y-8">
             <GameVideoSection game={game} />
             <GameDescription game={game} />
-            <GameTabs game={game} />
           </div>
 
           {/* Right Column - Game Info */}
