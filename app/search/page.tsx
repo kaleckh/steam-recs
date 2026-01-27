@@ -508,7 +508,7 @@ function SearchContent() {
                 </div>
 
                 {/* Questions list */}
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {conversation.followUpQuestions.map((q, qIndex) => {
                     const isAnswered = qIndex < collectedAnswers.length;
                     const isCurrent = qIndex === currentQuestionIndex;
@@ -520,17 +520,17 @@ function SearchContent() {
                         className={`transition-all ${isUpcoming ? 'opacity-40' : ''}`}
                       >
                         {/* Question with status */}
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-2">
                           {isAnswered ? (
                             <span className="text-neon-green">✓</span>
                           ) : (
                             <span className="text-gray-600">{qIndex + 1}.</span>
                           )}
-                          <p className={`font-mono text-sm ${isAnswered ? 'text-gray-500' : 'text-neon-cyan'}`}>
+                          <p className={`font-mono text-xs sm:text-sm ${isAnswered ? 'text-gray-500' : 'text-neon-cyan'}`}>
                             {q.question}
                           </p>
                           {isAnswered && (
-                            <span className="text-neon-green font-mono text-sm ml-2">
+                            <span className="text-neon-green font-mono text-xs sm:text-sm">
                               → {collectedAnswers[qIndex].answer}
                             </span>
                           )}
@@ -538,7 +538,7 @@ function SearchContent() {
 
                         {/* Answer chips for current question */}
                         {isCurrent && !isAnswered && (
-                          <div className="flex flex-wrap gap-2 ml-5">
+                          <div className="flex flex-wrap gap-1.5 sm:gap-2 ml-4 sm:ml-5">
                             {q.suggestedAnswers.map((answer, aIndex) => (
                               <button
                                 key={aIndex}
@@ -552,7 +552,7 @@ function SearchContent() {
                                   setFollowUpInput('');
                                 }}
                                 disabled={isLoading}
-                                className="px-3 py-1.5 bg-terminal-dark border border-neon-cyan/50 rounded text-neon-cyan font-mono text-sm transition-all hover:bg-neon-cyan/20 hover:border-neon-cyan disabled:opacity-50"
+                                className="px-2 sm:px-3 py-1 sm:py-1.5 bg-terminal-dark border border-neon-cyan/50 rounded text-neon-cyan font-mono text-[10px] sm:text-sm transition-all hover:bg-neon-cyan/20 hover:border-neon-cyan disabled:opacity-50"
                               >
                                 {answer}
                               </button>
@@ -563,7 +563,7 @@ function SearchContent() {
                               value={followUpInput}
                               onChange={(e) => setFollowUpInput(e.target.value)}
                               placeholder="Other..."
-                              className="px-3 py-1.5 bg-terminal-dark border border-terminal-border rounded text-neon-cyan placeholder-gray-600 font-mono text-sm focus:outline-none focus:border-neon-cyan transition-colors w-24"
+                              className="px-2 sm:px-3 py-1 sm:py-1.5 bg-terminal-dark border border-terminal-border rounded text-neon-cyan placeholder-gray-600 font-mono text-[10px] sm:text-sm focus:outline-none focus:border-neon-cyan transition-colors w-16 sm:w-24"
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter' && followUpInput.trim()) {
                                   setCollectedAnswers(prev => [...prev, { question: q.question, answer: followUpInput.trim() }]);
@@ -582,8 +582,8 @@ function SearchContent() {
                 </div>
 
                 {/* Search button - always visible, shows answer count */}
-                <div className="mt-4 pt-4 border-t border-terminal-border flex items-center justify-between">
-                  <span className="text-gray-500 font-mono text-xs">
+                <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-terminal-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                  <span className="text-gray-500 font-mono text-[10px] sm:text-xs">
                     {collectedAnswers.length} of {conversation.followUpQuestions.length} answered
                   </span>
                   <button
@@ -598,11 +598,11 @@ function SearchContent() {
                       }
                     }}
                     disabled={collectedAnswers.length === 0 || isLoading}
-                    className="px-4 py-2 bg-neon-orange/20 border border-neon-orange text-neon-orange font-mono text-sm rounded hover:bg-neon-orange/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-3 sm:px-4 py-1.5 sm:py-2 bg-neon-orange/20 border border-neon-orange text-neon-orange font-mono text-xs sm:text-sm rounded hover:bg-neon-orange/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                   >
                     {collectedAnswers.length === conversation.followUpQuestions.length
                       ? 'SEARCH WITH ALL ANSWERS'
-                      : `SEARCH NOW (${collectedAnswers.length} answer${collectedAnswers.length !== 1 ? 's' : ''})`}
+                      : `SEARCH NOW (${collectedAnswers.length})`}
                   </button>
                 </div>
               </div>
