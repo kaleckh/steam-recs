@@ -33,6 +33,19 @@ interface TasteDNAProps {
   compact?: boolean;
 }
 
+// All possible archetypes for the info modal
+const ALL_ARCHETYPES = [
+  { name: 'The Grand Strategist', emoji: '🎯', description: 'Plans ten moves ahead. Strategy games dominate.' },
+  { name: 'The Lore Seeker', emoji: '📜', description: 'Reads every book, knows the deep lore. RPG enthusiast.' },
+  { name: 'The Action Hero', emoji: '💥', description: 'Reflexes of a cat. Action & shooter specialist.' },
+  { name: 'The Virtual Architect', emoji: '🏗️', description: 'Builds worlds, manages empires. Simulation master.' },
+  { name: 'The Indie Explorer', emoji: '🔍', description: 'Finds gems before they trend. Indie connoisseur.' },
+  { name: 'The Devotee', emoji: '💎', description: 'Thousands of hours in one game. Ultimate dedication.' },
+  { name: 'The Collector', emoji: '📚', description: 'Vast library, curious mind. Plays everything.' },
+  { name: 'The Genre Hopper', emoji: '🦘', description: 'Never bored, always exploring. Diverse taste.' },
+  { name: 'The Versatile Gamer', emoji: '🎮', description: 'Balanced taste across the spectrum.' },
+];
+
 export default function TasteDNA({ userId, username, compact = false }: TasteDNAProps) {
   const [data, setData] = useState<TasteDNAData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -103,30 +116,107 @@ export default function TasteDNA({ userId, username, compact = false }: TasteDNA
 
   if (compact) {
     return (
-      <button
-        onClick={() => setShowShareModal(true)}
-        className="w-full terminal-box rounded-lg p-4 hover:border-purple-500/50 transition-all text-left group"
-      >
-        <div className="flex items-center gap-4">
-          <div className="text-4xl">{data.archetype.emoji}</div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-purple-400 font-mono text-xs uppercase tracking-wider">
-                Your Gamer DNA
-              </span>
-              <svg className="w-4 h-4 text-gray-500 group-hover:text-purple-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-              </svg>
+      <>
+        <button
+          onClick={() => setShowShareModal(true)}
+          className="mx-auto max-w-md terminal-box rounded-lg p-4 hover:border-purple-500/50 transition-all text-left group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="text-4xl">{data.archetype.emoji}</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-purple-400 font-mono text-xs uppercase tracking-wider">
+                  Your Gamer DNA
+                </span>
+                <svg className="w-4 h-4 text-gray-500 group-hover:text-purple-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+              </div>
+              <h3 className="orbitron text-lg font-bold text-white truncate">
+                {data.archetype.name}
+              </h3>
+              <p className="text-gray-500 font-mono text-xs truncate">
+                {data.rarityLabel} • {data.stats.totalHours.toLocaleString()}h played
+              </p>
             </div>
-            <h3 className="orbitron text-lg font-bold text-white truncate">
-              {data.archetype.name}
-            </h3>
-            <p className="text-gray-500 font-mono text-xs truncate">
-              {data.rarityLabel} • {data.stats.totalHours.toLocaleString()}h played
-            </p>
           </div>
-        </div>
-      </button>
+        </button>
+
+        {/* Archetype Info Modal */}
+        {showShareModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              onClick={() => setShowShareModal(false)}
+            />
+            <div className="relative terminal-box rounded-lg max-w-lg w-full max-h-[80vh] overflow-hidden">
+              <div className="terminal-header">
+                <span className="text-purple-400 text-sm font-mono ml-16">GAMER_ARCHETYPES.exe</span>
+              </div>
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="absolute top-3 right-4 text-gray-500 hover:text-white z-10"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              <div className="p-4 overflow-y-auto max-h-[calc(80vh-3rem)]">
+                <p className="text-gray-400 font-mono text-xs mb-4">
+                  Your archetype is determined by your play patterns, genre preferences, and library composition.
+                </p>
+
+                <div className="space-y-2">
+                  {ALL_ARCHETYPES.map((archetype) => {
+                    const isCurrentType = archetype.name === data.archetype.name;
+                    return (
+                      <div
+                        key={archetype.name}
+                        className={`p-3 rounded-lg border transition-all ${
+                          isCurrentType
+                            ? 'bg-purple-500/20 border-purple-500'
+                            : 'bg-terminal-dark border-terminal-border'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{archetype.emoji}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`font-mono text-sm font-bold ${isCurrentType ? 'text-purple-400' : 'text-white'}`}>
+                                {archetype.name}
+                              </span>
+                              {isCurrentType && (
+                                <span className="text-[10px] bg-purple-500 text-white px-1.5 py-0.5 rounded font-mono">
+                                  YOU
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-gray-500 font-mono text-xs">
+                              {archetype.description}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Share Button */}
+                <button
+                  onClick={handleShare}
+                  className="w-full mt-4 py-2 bg-purple-500/20 border border-purple-500 text-purple-400 font-mono text-sm rounded-lg hover:bg-purple-500/30 transition-all flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                  {copied ? 'COPIED!' : 'SHARE YOUR DNA'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
