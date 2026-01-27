@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import AnimatedBackground from '@/components/ui/AnimatedBackground';
 
 interface SearchFilters {
   minReviewScore: number;
@@ -269,10 +270,9 @@ function SearchContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] grid-pattern relative">
-      {/* CRT Effects */}
-      <div className="crt-scanlines" />
-      <div className="crt-vignette" />
+    <>
+      <AnimatedBackground />
+      <div className="min-h-screen relative">
 
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[#0a0a0f]/90 backdrop-blur-sm border-b border-terminal-border">
@@ -737,6 +737,7 @@ function SearchContent() {
         )}
       </div>
     </div>
+    </>
   );
 }
 

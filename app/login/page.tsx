@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import AnimatedBackground from '@/components/ui/AnimatedBackground';
 
 function LoginContent() {
   const [email, setEmail] = useState('');
@@ -142,14 +143,16 @@ function LoginContent() {
   };
 
   return (
-    <div className="min-h-screen bg-terminal-dark flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Terminal Window */}
-        <div className="terminal-box rounded-lg overflow-hidden">
-          {/* Terminal Header */}
-          <div className="terminal-header">
-            <span className="text-gray-400 text-sm font-mono ml-16">AUTH_PORTAL.exe</span>
-          </div>
+    <>
+      <AnimatedBackground />
+      <div className="min-h-screen relative flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Terminal Window */}
+          <div className="terminal-box rounded-lg overflow-hidden">
+            {/* Terminal Header */}
+            <div className="terminal-header">
+              <span className="text-gray-400 text-sm font-mono ml-16">AUTH_PORTAL.exe</span>
+            </div>
 
           {/* Terminal Body */}
           <div className="p-4 sm:p-6 lg:p-8">
@@ -311,9 +314,10 @@ function LoginContent() {
           <Link href="/" className="text-gray-500 font-mono text-xs sm:text-sm hover:text-neon-cyan transition-colors">
             &larr; Back to home
           </Link>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

@@ -14,6 +14,7 @@ import ErrorDisplay from '@/components/profile/ErrorDisplay';
 import AnalyticsTab from '@/components/profile/tabs/AnalyticsTab';
 import UpgradeModal from '@/components/premium/UpgradeModal';
 import TasteDNA from '@/components/profile/TasteDNA';
+import AnimatedBackground from '@/components/ui/AnimatedBackground';
 import { useAuth, CachedRecommendations } from '@/contexts/AuthContext';
 
 type ProfileState =
@@ -301,29 +302,29 @@ function ProfileContent() {
   // Show loading while auth is initializing
   if (authLoading || state.stage === 'loading') {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] py-12 px-4 sm:px-6 lg:px-8 pb-32 grid-pattern relative">
-        <div className="crt-scanlines" />
-        <div className="crt-vignette" />
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="flex justify-center py-24">
-            <div className="terminal-box rounded-lg p-8 flex flex-col items-center space-y-4">
-              <div className="relative w-16 h-16">
-                <div className="absolute inset-0 border-4 border-neon-cyan/20 rounded-full" />
-                <div className="absolute inset-0 border-4 border-transparent border-t-neon-cyan rounded-full animate-spin" />
+      <>
+        <AnimatedBackground />
+        <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8 pb-32">
+          <div className="max-w-7xl mx-auto relative z-10">
+            <div className="flex justify-center py-24">
+              <div className="terminal-box rounded-lg p-8 flex flex-col items-center space-y-4">
+                <div className="relative w-16 h-16">
+                  <div className="absolute inset-0 border-4 border-neon-cyan/20 rounded-full" />
+                  <div className="absolute inset-0 border-4 border-transparent border-t-neon-cyan rounded-full animate-spin" />
+                </div>
+                <p className="text-neon-cyan font-mono cursor-blink">INITIALIZING</p>
               </div>
-              <p className="text-neon-cyan font-mono cursor-blink">INITIALIZING</p>
             </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] py-12 px-4 sm:px-6 lg:px-8 pb-32 grid-pattern relative">
-      {/* CRT Effects */}
-      <div className="crt-scanlines" />
-      <div className="crt-vignette" />
+    <>
+      <AnimatedBackground />
+      <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8 pb-32">
 
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Header */}
@@ -632,6 +633,7 @@ function ProfileContent() {
         </div>
       )}
     </div>
+    </>
   );
 }
 

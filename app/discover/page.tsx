@@ -119,9 +119,9 @@ const DISCOVERY_CATEGORIES: DiscoveryCategory[] = [
     ),
     color: 'red',
     filters: {
-      minReviewScore: 95,
-      minReviewCount: 10000,
-      limit: 10,
+      minReviewScore: 90,
+      minReviewCount: 5000,
+      limit: 15,
     },
   },
 ];

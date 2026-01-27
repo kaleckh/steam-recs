@@ -7,6 +7,7 @@ import GameInfoSidebar from '@/components/game/GameInfoSidebar';
 import GameDescription from '@/components/game/GameDescription';
 import SimilarGames from '@/components/game/SimilarGames';
 import LoadingSpinner from '@/components/game/LoadingSpinner';
+import AnimatedBackground from '@/components/ui/AnimatedBackground';
 
 export interface GameDetail {
   appId: string;
@@ -147,10 +148,9 @@ export default function GameDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] grid-pattern relative">
-      {/* CRT Effects */}
-      <div className="crt-scanlines" />
-      <div className="crt-vignette" />
+    <>
+      <AnimatedBackground />
+      <div className="min-h-screen relative">
 
       {/* Header with Back Button */}
       <div className="border-b border-terminal-border bg-terminal-dark/80 backdrop-blur-sm sticky top-0 z-50">
@@ -198,5 +198,6 @@ export default function GameDetailPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

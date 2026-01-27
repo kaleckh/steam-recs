@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import AnimatedBackground from '@/components/ui/AnimatedBackground';
 
 export default function DevelopersPage() {
   const [testQuery, setTestQuery] = useState('');
@@ -25,10 +26,9 @@ export default function DevelopersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] grid-pattern relative">
-      {/* CRT Effects */}
-      <div className="crt-scanlines" />
-      <div className="crt-vignette" />
+    <>
+      <AnimatedBackground />
+      <div className="min-h-screen relative">
 
       {/* Navigation */}
       <nav className="sticky top-0 z-40 bg-[#0a0a0f]/90 backdrop-blur-sm border-b border-terminal-border">
@@ -427,5 +427,6 @@ export default function DevelopersPage() {
         </div>
       </footer>
     </div>
+    </>
   );
 }
