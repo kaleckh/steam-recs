@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
 import DiscoverySection from '@/components/discover/DiscoverySection';
+import DailyDiscovery from '@/components/discover/DailyDiscovery';
 import { GameRecommendation, getRecommendations, RecommendationFilters } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -134,7 +135,6 @@ function DiscoverContent() {
 
   const [categoryGames, setCategoryGames] = useState<Record<string, GameRecommendation[]>>({});
   const [loadingCategories, setLoadingCategories] = useState<Set<string>>(new Set());
-  const [featuredGem, setFeaturedGem] = useState<GameRecommendation | null>(null);
 
   // Fetch games for each category
   useEffect(() => {
@@ -154,10 +154,6 @@ function DiscoverContent() {
             ...prev,
             [category.id]: response.recommendations || [],
           }));
-          // Set featured gem from hidden gems category (first result)
-          if (category.id === 'hidden-gems' && response.recommendations.length > 0) {
-            setFeaturedGem(response.recommendations[0]);
-          }
         }
       } catch (err) {
         console.error(`Error fetching ${category.id}:`, err);
@@ -246,98 +242,10 @@ function DiscoverContent() {
           </div>
         </div>
 
-        {/* Featured Hidden Gem */}
-        {userId && featuredGem && (
+        {/* Daily Discovery - Your Perfect Pick */}
+        {userId && (
           <div className="max-w-7xl mx-auto px-4 md:px-8 mb-8">
-            <div className="terminal-box rounded-lg overflow-hidden">
-              <div className="terminal-header">
-                <span className="text-neon-cyan text-sm font-mono ml-16">FEATURED_GEM.exe</span>
-              </div>
-              <div className="relative">
-                {/* Background image with gradient overlay */}
-                <div className="absolute inset-0">
-                  {featuredGem.headerImage && (
-                    <img
-                      src={featuredGem.headerImage}
-                      alt=""
-                      className="w-full h-full object-cover opacity-30"
-                    />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-r from-terminal-dark via-terminal-dark/90 to-transparent" />
-                </div>
-
-                <div className="relative p-8 md:p-12 flex flex-col md:flex-row gap-8 items-center">
-                  {/* Game image */}
-                  <Link href={`/game/${featuredGem.appId}`} className="flex-shrink-0 group">
-                    <div className="relative">
-                      <img
-                        src={featuredGem.headerImage || `https://steamcdn-a.akamaihd.net/steam/apps/${featuredGem.appId}/header.jpg`}
-                        alt={featuredGem.name}
-                        className="w-72 h-auto rounded-lg shadow-2xl shadow-neon-cyan/20 group-hover:shadow-neon-cyan/40 transition-shadow"
-                      />
-                      <div className="absolute top-3 right-3 bg-neon-cyan text-black px-3 py-1 rounded-full text-sm font-mono font-bold">
-                        {Math.round(featuredGem.similarity * 100)}% MATCH
-                      </div>
-                    </div>
-                  </Link>
-
-                  {/* Game info */}
-                  <div className="flex-1 text-center md:text-left">
-                    <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
-                      <svg className="w-5 h-5 text-neon-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                      </svg>
-                      <span className="text-neon-cyan font-mono text-sm uppercase tracking-wider">Today&apos;s Hidden Gem</span>
-                    </div>
-
-                    <Link href={`/game/${featuredGem.appId}`}>
-                      <h2 className="orbitron text-2xl md:text-4xl font-black text-white mb-3 hover:text-neon-cyan transition-colors">
-                        {featuredGem.name}
-                      </h2>
-                    </Link>
-
-                    {featuredGem.shortDescription && (
-                      <p className="text-gray-400 font-mono text-sm md:text-base mb-4 max-w-xl">
-                        {featuredGem.shortDescription}
-                      </p>
-                    )}
-
-                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm font-mono">
-                      {featuredGem.reviewScore && (
-                        <span className="text-green-400">
-                          {featuredGem.reviewScore}% Positive
-                        </span>
-                      )}
-                      {featuredGem.releaseYear && (
-                        <span className="text-gray-500">{featuredGem.releaseYear}</span>
-                      )}
-                      {featuredGem.reviewCount && (
-                        <span className="text-neon-orange">
-                          {featuredGem.reviewCount < 1000
-                            ? `${featuredGem.reviewCount} reviews`
-                            : `${(featuredGem.reviewCount / 1000).toFixed(1)}k reviews`}
-                        </span>
-                      )}
-                      {featuredGem.genres && featuredGem.genres.length > 0 && (
-                        <span className="text-gray-500">
-                          {featuredGem.genres.slice(0, 2).join(' · ')}
-                        </span>
-                      )}
-                    </div>
-
-                    <Link
-                      href={`/game/${featuredGem.appId}`}
-                      className="inline-flex items-center gap-2 mt-6 px-6 py-3 bg-neon-cyan text-black font-mono font-bold rounded-lg hover:bg-white transition-colors"
-                    >
-                      VIEW DETAILS
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                      </svg>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <DailyDiscovery userId={userId} />
           </div>
         )}
 
@@ -345,10 +253,7 @@ function DiscoverContent() {
         <div className="max-w-7xl mx-auto pb-16">
           {userId ? (
             DISCOVERY_CATEGORIES.map((category) => {
-              // Exclude featured gem from hidden gems to avoid duplication
-              const games = category.id === 'hidden-gems' && featuredGem
-                ? (categoryGames[category.id] || []).filter(g => g.appId !== featuredGem.appId)
-                : (categoryGames[category.id] || []);
+              const games = categoryGames[category.id] || [];
 
               return (
                 <DiscoverySection

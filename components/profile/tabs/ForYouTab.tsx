@@ -17,6 +17,8 @@ interface ForYouTabProps {
   onFilterChange: (filters: RecommendationFilters) => void;
   isApplyingFilters: boolean;
   isPremium?: boolean;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 export default function ForYouTab({
@@ -28,6 +30,8 @@ export default function ForYouTab({
   onFilterChange,
   isApplyingFilters,
   isPremium = false,
+  onRefresh,
+  isRefreshing = false,
 }: ForYouTabProps) {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
@@ -79,6 +83,31 @@ export default function ForYouTab({
           </div>
         </div>
       </Link>
+
+      {/* Recommendations Header with Refresh */}
+      <div className="flex items-center justify-between">
+        <h2 className="orbitron text-xl font-bold text-white flex items-center gap-2">
+          <span className="text-neon-cyan">&gt;</span> FOR_YOU.exe
+        </h2>
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            disabled={isRefreshing || isApplyingFilters}
+            className="flex items-center gap-2 px-4 py-2 bg-terminal-dark border border-terminal-border text-gray-400 font-mono text-sm rounded-lg hover:border-neon-cyan hover:text-neon-cyan transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Refresh recommendations based on your latest feedback"
+          >
+            <svg
+              className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {isRefreshing ? 'REFRESHING...' : 'REFRESH'}
+          </button>
+        )}
+      </div>
 
       {/* Filters */}
       <FilterControls

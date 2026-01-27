@@ -54,7 +54,7 @@ const colorClasses = {
   },
 };
 
-function GameCard({ game, color }: { game: GameRecommendation; color: keyof typeof colorClasses }) {
+function GameCard({ game, color, index = 0 }: { game: GameRecommendation; color: keyof typeof colorClasses; index?: number }) {
   const colors = colorClasses[color];
   const matchPercent = Math.round(game.similarity * 100);
 
@@ -66,7 +66,9 @@ function GameCard({ game, color }: { game: GameRecommendation; color: keyof type
         bg-terminal-dark border border-terminal-border
         hover:border-gray-600 ${colors.glow}
         transition-all duration-300 group
+        animate-fade-in-up
       `}
+      style={{ animationDelay: `${index * 75}ms` }}
     >
       {/* Game Image */}
       <div className="relative aspect-[460/215] overflow-hidden">
@@ -256,8 +258,8 @@ export default function DiscoverySection({
               <LoadingCard />
             </>
           ) : games.length > 0 ? (
-            games.map((game) => (
-              <GameCard key={game.appId} game={game} color={color} />
+            games.map((game, index) => (
+              <GameCard key={game.appId} game={game} color={color} index={index} />
             ))
           ) : (
             <div className="flex-shrink-0 w-full py-12 text-center text-gray-500 font-mono">
