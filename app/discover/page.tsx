@@ -6,6 +6,7 @@ import Link from 'next/link';
 import AnimatedBackground from '@/components/ui/AnimatedBackground';
 import DiscoverySection from '@/components/discover/DiscoverySection';
 import DailyDiscovery from '@/components/discover/DailyDiscovery';
+import MoodQuickMatch from '@/components/discover/MoodQuickMatch';
 import { GameRecommendation, getRecommendations, RecommendationFilters } from '@/lib/api-client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -246,6 +247,13 @@ function DiscoverContent() {
         {userId && (
           <div className="max-w-7xl mx-auto px-4 md:px-8 mb-8">
             <DailyDiscovery userId={userId} />
+          </div>
+        )}
+
+        {/* Mood Quick-Match */}
+        {userId && (
+          <div className="max-w-7xl mx-auto px-4 md:px-8 mb-8">
+            <MoodQuickMatch userId={userId} />
           </div>
         )}
 

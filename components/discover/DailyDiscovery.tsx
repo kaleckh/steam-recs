@@ -194,7 +194,7 @@ export default function DailyDiscovery({ userId }: DailyDiscoveryProps) {
               </div>
             )}
 
-            <div className="flex items-center justify-center md:justify-start gap-4">
+            <div className="flex items-center justify-center md:justify-start gap-3 flex-wrap">
               <Link
                 href={`/game/${dailyPick.appId}`}
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-neon-orange text-black font-mono font-bold rounded-lg hover:bg-neon-yellow transition-colors"
@@ -204,6 +204,37 @@ export default function DailyDiscovery({ userId }: DailyDiscoveryProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
               </Link>
+
+              {/* Share Buttons */}
+              <div className="flex items-center gap-2">
+                {/* Twitter/X Share */}
+                <a
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`My daily game pick: ${dailyPick.name} (${dailyPick.matchPercent}% match!) 🎮\n\nFind your perfect games at`)}&url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.origin : '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-lg bg-terminal-dark border border-terminal-border hover:border-gray-500 text-gray-400 hover:text-white transition-all"
+                  title="Share on X"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  </svg>
+                </a>
+
+                {/* Copy Link */}
+                <button
+                  onClick={() => {
+                    const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/game/${dailyPick.appId}`;
+                    navigator.clipboard.writeText(url);
+                  }}
+                  className="p-2 rounded-lg bg-terminal-dark border border-terminal-border hover:border-gray-500 text-gray-400 hover:text-white transition-all"
+                  title="Copy link"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              </div>
+
               <span className="text-gray-500 font-mono text-xs">
                 New pick in {refreshIn}
               </span>

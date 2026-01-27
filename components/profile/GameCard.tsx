@@ -1,13 +1,18 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { GameRecommendation } from '@/lib/api-client';
+import { GameRecommendation, submitFeedback } from '@/lib/api-client';
 
 interface GameCardProps {
   game: GameRecommendation;
+  userId?: string;
+  onNotInterested?: (appId: string) => void;
 }
 
-export default function GameCard({ game }: GameCardProps) {
+export default function GameCard({ game, userId, onNotInterested }: GameCardProps) {
+  const [isHidden, setIsHidden] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const gameUrl = `/game/${game.appId}`;
 
   const getReviewLabel = (score: number) => {
@@ -20,8 +25,59 @@ export default function GameCard({ game }: GameCardProps) {
 
   const reviewInfo = game.reviewScore ? getReviewLabel(game.reviewScore) : null;
 
+  const handleNotInterested = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!userId || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      const result = await submitFeedback(userId, game.appId, 'not_interested');
+      if (result.success) {
+        setIsHidden(true);
+        onNotInterested?.(game.appId);
+      }
+    } catch (error) {
+      console.error('Failed to submit not interested:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Animate out when hidden
+  if (isHidden) {
+    return (
+      <div className="card-arcade rounded-lg overflow-hidden opacity-0 scale-95 transition-all duration-300">
+        <div className="aspect-video bg-terminal-dark" />
+        <div className="p-4 h-32" />
+      </div>
+    );
+  }
+
   return (
-    <div className="card-arcade rounded-lg overflow-hidden group">
+    <div className="card-arcade rounded-lg overflow-hidden group relative">
+      {/* Not Interested Button - shows on hover */}
+      {userId && (
+        <button
+          onClick={handleNotInterested}
+          disabled={isSubmitting}
+          className="absolute top-2 left-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-full bg-terminal-dark/90 border border-terminal-border hover:border-red-500 hover:bg-red-500/20 text-gray-400 hover:text-red-400"
+          title="Not interested"
+        >
+          {isSubmitting ? (
+            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            </svg>
+          )}
+        </button>
+      )}
+
       <Link
         href={gameUrl}
         className="block"

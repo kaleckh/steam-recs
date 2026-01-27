@@ -333,7 +333,14 @@ export default function RecommendationsList({
               animationFillMode: 'forwards',
             }}
           >
-            <GameCard game={game} />
+            <GameCard
+              game={game}
+              userId={userId}
+              onNotInterested={(appId) => {
+                // Remove the game from the list
+                setRecommendations(prev => prev.filter(g => g.appId !== appId));
+              }}
+            />
           </div>
         ))}
       </div>

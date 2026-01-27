@@ -279,6 +279,58 @@ export default function FilterControls({
               Free to play only
             </span>
           </label>
+
+          {/* Deep Cuts Mode Toggle */}
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <div className={`
+              w-5 h-5 rounded border-2 flex items-center justify-center transition-all
+              ${filters.maxReviewCount !== undefined
+                ? 'bg-neon-orange/20 border-neon-orange'
+                : 'border-terminal-border group-hover:border-gray-500'
+              }
+            `}>
+              {filters.maxReviewCount !== undefined && (
+                <svg className="w-3 h-3 text-neon-orange" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+            <input
+              type="checkbox"
+              checked={filters.maxReviewCount !== undefined}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  // Enable deep cuts: low popularity, cap review count at 5000
+                  const deepCutsFilters = {
+                    ...filters,
+                    maxReviewCount: 5000,
+                    popularityScore: 20,
+                  };
+                  setFilters(deepCutsFilters);
+                  onFilterChange(deepCutsFilters);
+                } else {
+                  // Disable deep cuts: remove review count cap, reset popularity
+                  const normalFilters = {
+                    ...filters,
+                    maxReviewCount: undefined,
+                    popularityScore: 50,
+                  };
+                  setFilters(normalFilters);
+                  onFilterChange(normalFilters);
+                }
+              }}
+              disabled={isLoading}
+              className="sr-only"
+            />
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-mono text-gray-400 group-hover:text-gray-300 transition-colors">
+                Deep Cuts Mode
+              </span>
+              <span className="px-1.5 py-0.5 text-[9px] bg-neon-orange/20 text-neon-orange rounded font-mono">
+                &lt;5K REVIEWS
+              </span>
+            </div>
+          </label>
         </div>
       </div>
     </div>
