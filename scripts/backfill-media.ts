@@ -6,6 +6,9 @@
  *   npx tsx scripts/backfill-media.ts --dry-run    # Just report which games are missing media
  *   npx tsx scripts/backfill-media.ts --limit=100  # Process only first 100 games
  *   npx tsx scripts/backfill-media.ts --min-reviews=1000  # Only games with 1000+ reviews
+ *   npx tsx scripts/backfill-media.ts --batch=50          # Batch size (default: 20)
+ *
+ * Note: Steam API rate limits aggressively (~200 req/5min). Script uses 2s delays between requests.
  */
 
 import 'dotenv/config';
@@ -120,6 +123,47 @@ async function fetchWithRetry(appId: number, retries = 3): Promise<any> {
   return null;
 }
 
+async function processGame(
+  game: GameWithMetadata,
+  stats: { updated: number; failed: number; noData: number; rateLimited: number }
+): Promise<boolean> {
+  try {
+    const steamData = await fetchWithRetry(Number(game.appId));
+
+    if (!steamData) {
+      stats.noData++;
+      return false;
+    }
+
+    const hasMedia =
+      (Array.isArray(steamData.screenshots) && steamData.screenshots.length > 0) ||
+      (Array.isArray(steamData.movies) && steamData.movies.length > 0);
+
+    if (!hasMedia) {
+      stats.noData++;
+      return false;
+    }
+
+    const success = await updateGameMedia(game.appId, game.metadata, steamData);
+    if (success) {
+      stats.updated++;
+      console.log(`  ✓ ${game.appId}: ${steamData.screenshots?.length || 0} screenshots, ${steamData.movies?.length || 0} movies`);
+    } else {
+      stats.failed++;
+    }
+    return false;
+  } catch (error: any) {
+    if (error?.message?.includes('429') || error?.status === 429) {
+      stats.rateLimited++;
+      console.log(`  ⚠ Rate limited on ${game.appId}`);
+      return true; // Hit rate limit
+    } else {
+      stats.failed++;
+    }
+    return false;
+  }
+}
+
 async function processGameBatch(
   games: GameWithMetadata[],
   stats: { updated: number; failed: number; noData: number; rateLimited: number },
@@ -128,44 +172,16 @@ async function processGameBatch(
 ): Promise<boolean> {
   let hitRateLimit = false;
 
-  // Process sequentially within batch to avoid hammering API
+  // Process sequentially with delay between each request
   for (const game of games) {
-    try {
-      const steamData = await fetchWithRetry(Number(game.appId));
-
-      if (!steamData) {
-        stats.noData++;
-        continue;
-      }
-
-      const hasMedia =
-        (Array.isArray(steamData.screenshots) && steamData.screenshots.length > 0) ||
-        (Array.isArray(steamData.movies) && steamData.movies.length > 0);
-
-      if (!hasMedia) {
-        stats.noData++;
-        continue;
-      }
-
-      const success = await updateGameMedia(game.appId, game.metadata, steamData);
-      if (success) {
-        stats.updated++;
-        console.log(`  ✓ ${game.appId}: ${steamData.screenshots?.length || 0} screenshots, ${steamData.movies?.length || 0} movies`);
-      } else {
-        stats.failed++;
-      }
-
-      // Small delay between each request
-      await sleep(500);
-    } catch (error: any) {
-      if (error?.message?.includes('429') || error?.status === 429) {
-        stats.rateLimited++;
-        hitRateLimit = true;
-        console.log(`  ⚠ Rate limited on ${game.appId}`);
-      } else {
-        stats.failed++;
-      }
+    const wasRateLimited = await processGame(game, stats);
+    if (wasRateLimited) {
+      hitRateLimit = true;
+      // Extra pause if we hit rate limit
+      await sleep(5000);
     }
+    // 2 second delay between each request
+    await sleep(2000);
   }
 
   console.log(`[Batch ${batchNum}/${totalBatches}] Updated: ${stats.updated}, No data: ${stats.noData}, Failed: ${stats.failed}, Rate limited: ${stats.rateLimited}`);
@@ -227,15 +243,15 @@ async function main() {
     return;
   }
 
-  // Parse batch size from args (default 10 games per batch)
+  // Parse batch size from args
   const batchSizeArg = args.find(a => a.startsWith('--batch='));
-  const batchSize = batchSizeArg ? parseInt(batchSizeArg.split('=')[1], 10) : 10;
+  const batchSize = batchSizeArg ? parseInt(batchSizeArg.split('=')[1], 10) : 20;
 
-  console.log(`Fetching media from Steam API (batch size: ${batchSize})...\n`);
+  console.log(`Fetching media from Steam API (batch size: ${batchSize}, 2s between requests)...\n`);
 
   const stats = { updated: 0, failed: 0, noData: 0, rateLimited: 0 };
   const totalBatches = Math.ceil(gamesMissingMedia.length / batchSize);
-  let batchDelay = 3000; // Start with 3s between batches
+  let batchDelay = 5000; // Start with 5s between batches
 
   for (let i = 0; i < gamesMissingMedia.length; i += batchSize) {
     const batch = gamesMissingMedia.slice(i, i + batchSize);
@@ -247,8 +263,8 @@ async function main() {
     if (hitRateLimit) {
       batchDelay = Math.min(batchDelay * 2, 30000); // Max 30s
       console.log(`  Increasing batch delay to ${batchDelay / 1000}s`);
-    } else if (batchDelay > 3000) {
-      batchDelay = Math.max(batchDelay - 1000, 3000); // Gradually reduce
+    } else if (batchDelay > 5000) {
+      batchDelay = Math.max(batchDelay - 1000, 5000); // Gradually reduce
     }
 
     if (i + batchSize < gamesMissingMedia.length) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, useMemo } from 'react';
+import { Suspense, useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -93,6 +93,9 @@ function SearchContent() {
     isFree: undefined,
   });
 
+  // Abort controller for cancelling searches
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   // Filter and sort results based on current filters
   const filteredResults = useMemo(() => {
     // First, filter the results
@@ -159,6 +162,14 @@ function SearchContent() {
         return;
       }
 
+      // Cancel any existing search
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      // Create new abort controller for this search
+      abortControllerRef.current = new AbortController();
+
       setIsLoading(true);
       setError(null);
       setCollectedAnswers([]); // Reset for new search
@@ -172,7 +183,9 @@ function SearchContent() {
         });
         if (userId) params.set('userId', userId);
 
-        const response = await fetch(`/api/search?${params.toString()}`);
+        const response = await fetch(`/api/search?${params.toString()}`, {
+          signal: abortControllerRef.current.signal,
+        });
         const data: SearchResponse = await response.json();
 
         if (data.success) {
@@ -183,6 +196,10 @@ function SearchContent() {
           setConversation(null);
         }
       } catch (err) {
+        // Don't show error if request was cancelled
+        if (err instanceof Error && err.name === 'AbortError') {
+          return;
+        }
         setError('Failed to perform search');
       } finally {
         setIsLoading(false);
@@ -190,7 +207,21 @@ function SearchContent() {
     }
 
     performSearch();
+
+    // Cleanup: abort on unmount
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [query, userId]);
+
+  const handleCancelSearch = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setIsLoading(false);
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -304,11 +335,17 @@ function SearchContent() {
               </p>
               <p className="text-gray-500 font-mono text-xs sm:text-sm mb-4 line-clamp-1">"{query}"</p>
               <div className="border-t border-terminal-border pt-3 sm:pt-4 mt-3 sm:mt-4">
-                <p className="text-gray-600 font-mono text-[10px] sm:text-xs leading-relaxed">
+                <p className="text-gray-600 font-mono text-[10px] sm:text-xs leading-relaxed mb-4">
                   Searching 22,000+ games for the perfect match.
                   <br />
                   <span className="text-neon-orange/70">Good recommendations take a moment.</span>
                 </p>
+                <button
+                  onClick={handleCancelSearch}
+                  className="px-4 py-2 border border-gray-600 text-gray-400 font-mono text-xs rounded hover:border-neon-orange hover:text-neon-orange transition-colors"
+                >
+                  CANCEL
+                </button>
               </div>
             </div>
           </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 
 interface SearchFilters {
@@ -129,6 +129,9 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
     isFree: undefined,
   });
 
+  // Abort controller for cancelling searches
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   // Filter results
   const filteredResults = useMemo(() => {
     let filtered = results.filter(game => {
@@ -196,6 +199,14 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
   }, [userId]);
 
   const performSearch = async (searchQuery: string) => {
+    // Cancel any existing search
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this search
+    abortControllerRef.current = new AbortController();
+
     setIsLoading(true);
     setError(null);
     setSelectedAnswers(new Set());
@@ -209,7 +220,9 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
       });
       if (userId) params.set('userId', userId);
 
-      const response = await fetch(`/api/search?${params.toString()}`);
+      const response = await fetch(`/api/search?${params.toString()}`, {
+        signal: abortControllerRef.current.signal,
+      });
       const data: SearchResponse = await response.json();
 
       if (data.success) {
@@ -219,11 +232,22 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
         setError(data.error || 'Search failed');
         setConversation(null);
       }
-    } catch {
+    } catch (err) {
+      // Don't show error if request was cancelled
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
       setError('Failed to perform search');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleCancelSearch = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    setIsLoading(false);
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -394,7 +418,7 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
               <span className="inline-block w-6 text-left animate-pulse">...</span>
             </p>
             <p className="text-gray-500 font-mono text-sm mb-4">"{query}"</p>
-            <div className="px-4 py-2 bg-neon-orange/10 border border-neon-orange/30 rounded-lg">
+            <div className="px-4 py-2 bg-neon-orange/10 border border-neon-orange/30 rounded-lg mb-4">
               <p className="text-neon-orange font-mono text-xs">
                 <span className="text-white font-bold">150,000+</span> games in database
               </p>
@@ -402,6 +426,12 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
                 AI is finding the perfect matches for you
               </p>
             </div>
+            <button
+              onClick={handleCancelSearch}
+              className="px-4 py-2 border border-gray-600 text-gray-400 font-mono text-xs rounded hover:border-neon-orange hover:text-neon-orange transition-colors"
+            >
+              CANCEL
+            </button>
           </div>
         </div>
       )}

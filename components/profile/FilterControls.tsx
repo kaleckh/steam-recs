@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { RecommendationFilters } from '@/lib/api-client';
 
 interface FilterControlsProps {
@@ -29,21 +29,60 @@ export default function FilterControls({
     }
   );
 
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitialMount = useRef(true);
+
+  // Only sync from parent on initial mount, not during user interaction
   useEffect(() => {
-    if (currentFilters) {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    // Only sync if not currently dragging (debounce not active)
+    if (currentFilters && !debounceRef.current) {
       setFilters(currentFilters);
     }
   }, [currentFilters]);
 
+  // Debounced filter change for sliders - updates local state immediately, calls parent after delay
+  const handleSliderChange = useCallback(
+    (key: keyof RecommendationFilters, value: number) => {
+      // Use functional update for immediate smooth slider movement
+      setFilters(prev => {
+        const newFilters = { ...prev, [key]: value };
+
+        // Debounce the parent callback
+        if (debounceRef.current) {
+          clearTimeout(debounceRef.current);
+        }
+        debounceRef.current = setTimeout(() => {
+          onFilterChange(newFilters);
+        }, 300);
+
+        return newFilters;
+      });
+    },
+    [onFilterChange]
+  );
+
+  // Immediate filter change for checkboxes
   const handleFilterChange = (
     key: keyof RecommendationFilters,
     value: unknown
   ) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
-    // Auto-apply on change
     onFilterChange(newFilters);
   };
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, []);
 
   if (compact) {
     // Compact version for search page
@@ -178,13 +217,13 @@ export default function FilterControls({
               type="range"
               min="0"
               max="100"
-              step="5"
+              step="1"
               value={filters.popularityScore ?? 50}
               onChange={(e) =>
-                handleFilterChange('popularityScore', parseInt(e.target.value))
+                handleSliderChange('popularityScore', parseInt(e.target.value))
               }
               disabled={isLoading}
-              className="slider-retro w-full"
+              className="w-full slider-retro"
             />
             <div className="flex justify-between text-xs text-gray-600 mt-1 font-mono">
               <span className="text-neon-orange">Hidden Gems</span>
@@ -203,13 +242,13 @@ export default function FilterControls({
               type="range"
               min="0"
               max="100"
-              step="10"
+              step="1"
               value={filters.minReviewScore}
               onChange={(e) =>
-                handleFilterChange('minReviewScore', parseInt(e.target.value))
+                handleSliderChange('minReviewScore', parseInt(e.target.value))
               }
               disabled={isLoading}
-              className="slider-retro w-full"
+              className="w-full slider-retro"
             />
             <div className="flex justify-between text-xs text-gray-600 mt-1 font-mono">
               <span>Any</span>
