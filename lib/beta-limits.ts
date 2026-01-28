@@ -4,7 +4,8 @@ import { NextResponse } from 'next/server';
 /**
  * Search Credits System
  *
- * - Free users: 6 searches (beta)
+ * - Anonymous users: 1 trial search (stored in localStorage)
+ * - Free users: 5 searches after signup
  * - Purchased credits: Use purchased credits first, then fall back to free tier
  *
  * Credit packages:
@@ -13,7 +14,8 @@ import { NextResponse } from 'next/server';
  */
 
 // Configuration
-export const FREE_SEARCH_LIMIT = 6;
+export const FREE_SEARCH_LIMIT = 5;
+export const ANONYMOUS_SEARCH_LIMIT = 1;
 
 // Credit packages
 export const CREDIT_PACKAGES = {

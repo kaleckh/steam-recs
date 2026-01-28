@@ -13,6 +13,8 @@ interface SearchFilters {
 }
 
 const LOADING_WORDS = ['SEARCHING', 'CHECKING', 'LOOTING', 'BROWSING', 'SCANNING', 'ANALYZING'];
+const ANONYMOUS_SEARCH_KEY = 'anonymous_searches_used';
+const ANONYMOUS_SEARCH_LIMIT = 1;
 
 interface SearchResult {
   appId: string;
@@ -103,6 +105,10 @@ function SearchContent() {
   const [searchCredits, setSearchCredits] = useState<SearchCredits | null>(null);
   const [creditsLoading, setCreditsLoading] = useState(true);
 
+  // Anonymous user tracking
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [anonymousSearchesUsed, setAnonymousSearchesUsed] = useState(0);
+
   // Restore state from localStorage on mount (client-side only)
   useEffect(() => {
     try {
@@ -117,6 +123,9 @@ function SearchContent() {
           }
         }
       }
+      // Load anonymous search count
+      const anonSearches = parseInt(localStorage.getItem(ANONYMOUS_SEARCH_KEY) || '0', 10);
+      setAnonymousSearchesUsed(anonSearches);
     } catch {}
     setHasRestoredState(true);
   }, [query]);
@@ -239,6 +248,16 @@ function SearchContent() {
         return;
       }
 
+      // Check if anonymous user has used their trial
+      if (!userId) {
+        const anonSearches = parseInt(localStorage.getItem(ANONYMOUS_SEARCH_KEY) || '0', 10);
+        if (anonSearches >= ANONYMOUS_SEARCH_LIMIT) {
+          setShowLoginModal(true);
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const cacheKey = getCacheKey(query);
 
       // Check localStorage for cached results for THIS query
@@ -292,6 +311,15 @@ function SearchContent() {
             setSearchCredits(data.searchCredits);
           }
 
+          // Track anonymous search usage
+          if (!userId) {
+            const newCount = anonymousSearchesUsed + 1;
+            setAnonymousSearchesUsed(newCount);
+            try {
+              localStorage.setItem(ANONYMOUS_SEARCH_KEY, String(newCount));
+            } catch {}
+          }
+
           // Save to localStorage
           try {
             localStorage.setItem(cacheKey, JSON.stringify({
@@ -337,6 +365,11 @@ function SearchContent() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchInput.trim()) {
+      // Check if anonymous user has used their trial
+      if (!userId && anonymousSearchesUsed >= ANONYMOUS_SEARCH_LIMIT) {
+        setShowLoginModal(true);
+        return;
+      }
       setConversation(null); // Reset conversation for new search
       setCollectedAnswers([]); // Reset collected answers
       setCurrentQuestionIndex(0); // Reset question index
@@ -382,6 +415,67 @@ function SearchContent() {
   return (
     <>
       <AnimatedBackground />
+
+      {/* Login Modal for Anonymous Users */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setShowLoginModal(false)}
+          />
+          <div className="relative terminal-box rounded-lg p-6 sm:p-8 max-w-md w-full animate-in fade-in zoom-in duration-200">
+            <div className="text-center">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-4 rounded-full bg-neon-cyan/20 border-2 border-neon-cyan flex items-center justify-center">
+                <svg className="w-7 h-7 sm:w-8 sm:h-8 text-neon-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <h3 className="orbitron text-xl sm:text-2xl font-bold text-white mb-2">
+                SIGN IN TO CONTINUE
+              </h3>
+              <p className="text-gray-400 font-mono text-xs sm:text-sm mb-4">
+                You've used your free trial search!
+              </p>
+              <div className="bg-terminal-dark rounded-lg p-3 sm:p-4 mb-6 border border-terminal-border">
+                <p className="text-neon-green font-mono text-xs sm:text-sm mb-2">
+                  Create a free account to get:
+                </p>
+                <ul className="text-left text-gray-400 font-mono text-xs space-y-1.5">
+                  <li className="flex items-center gap-2">
+                    <span className="text-neon-green">✓</span> 5 free AI searches
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-neon-green">✓</span> Personalized recommendations
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-neon-green">✓</span> Train your taste with feedback
+                  </li>
+                </ul>
+              </div>
+
+              <div className="space-y-3">
+                <Link
+                  href="/login"
+                  className="block w-full py-3 px-6 bg-neon-cyan text-black font-bold rounded-lg hover:bg-neon-cyan/90 transition-all orbitron text-sm sm:text-base"
+                >
+                  SIGN IN / SIGN UP
+                </Link>
+                <button
+                  onClick={() => setShowLoginModal(false)}
+                  className="w-full py-3 px-6 bg-terminal-dark border border-terminal-border text-gray-400 font-mono text-xs sm:text-sm rounded-lg hover:border-gray-500 hover:text-white transition-all"
+                >
+                  Maybe later
+                </button>
+              </div>
+
+              <p className="text-gray-600 font-mono text-[10px] sm:text-xs mt-4">
+                Free to sign up • No credit card required
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="min-h-screen relative">
 
       {/* Header */}
@@ -433,7 +527,7 @@ function SearchContent() {
                     ) : searchCredits ? (
                       `Free searches: ${searchCredits.freeSearchesUsed}/${searchCredits.freeLimit}`
                     ) : (
-                      'Free searches: 0/6'
+                      'Free searches: 0/5'
                     )}
                   </span>
                   {searchCredits && searchCredits.purchasedCredits > 0 && (

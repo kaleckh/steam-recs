@@ -3,32 +3,33 @@
 import { useEffect, useRef, useState } from 'react';
 
 // Real Steam games with their app IDs for header images
+// popularity: 0-100 scale (100 = mainstream hit, lower = hidden gem)
 const exampleQueries = [
   {
     query: "cozy roguelikes with good progression",
     results: [
-      { appId: '1966900', name: 'Dome Keeper', score: 94 },
-      { appId: '1942280', name: 'Brotato', score: 91 },
-      { appId: '2379780', name: 'Balatro', score: 89 },
-      { appId: '1637320', name: 'Cult of the Lamb', score: 87 },
+      { appId: '1966900', name: 'Dome Keeper', score: 94, popularity: 45 },
+      { appId: '1942280', name: 'Brotato', score: 91, popularity: 65 },
+      { appId: '2379780', name: 'Balatro', score: 89, popularity: 70 },
+      { appId: '1637320', name: 'Cult of the Lamb', score: 87, popularity: 85 },
     ]
   },
   {
     query: "atmospheric horror like Resident Evil",
     results: [
-      { appId: '268050', name: 'The Evil Within', score: 96 },
-      { appId: '214490', name: 'Alien: Isolation', score: 93 },
-      { appId: '282140', name: 'SOMA', score: 90 },
-      { appId: '238320', name: 'Outlast', score: 88 },
+      { appId: '282140', name: 'SOMA', score: 96, popularity: 55 },
+      { appId: '594330', name: 'Visage', score: 93, popularity: 35 },
+      { appId: '274520', name: 'Darkwood', score: 90, popularity: 40 },
+      { appId: '214490', name: 'Alien: Isolation', score: 88, popularity: 75 },
     ]
   },
   {
     query: "relaxing city builders no combat",
     results: [
-      { appId: '1658280', name: 'Mini Motorways', score: 95 },
-      { appId: '1127500', name: 'Dorfromantik', score: 93 },
-      { appId: '1681970', name: 'Townscaper', score: 91 },
-      { appId: '600090', name: 'Planet Coaster', score: 88 },
+      { appId: '1127500', name: 'Dorfromantik', score: 95, popularity: 50 },
+      { appId: '1681970', name: 'Townscaper', score: 93, popularity: 40 },
+      { appId: '1658280', name: 'Mini Motorways', score: 91, popularity: 55 },
+      { appId: '600090', name: 'Planet Coaster', score: 88, popularity: 80 },
     ]
   }
 ];
@@ -140,9 +141,10 @@ export default function ExampleRecsSection() {
               {/* Game Results Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
                 {currentExample.results.map((game, index) => (
-                  <div
+                  <a
                     key={game.appId}
-                    className="group relative rounded-lg overflow-hidden bg-terminal-dark border border-terminal-border hover:border-neon-cyan transition-all"
+                    href={`/game/${game.appId}`}
+                    className="group relative rounded-lg overflow-hidden bg-terminal-dark border border-terminal-border hover:border-neon-cyan transition-all block"
                     style={{
                       animationDelay: `${index * 100}ms`,
                     }}
@@ -163,15 +165,27 @@ export default function ExampleRecsSection() {
 
                     {/* Game Info */}
                     <div className="p-2 sm:p-3">
-                      <h4 className="text-white font-mono text-xs sm:text-sm truncate group-hover:text-neon-cyan transition-colors">
-                        {game.name}
-                      </h4>
-                      <div className="flex items-center gap-2 mt-1 hidden sm:flex">
-                        <span className="text-xs text-gray-600 font-mono">#{index + 1} result</span>
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="text-white font-mono text-xs sm:text-sm truncate group-hover:text-neon-cyan transition-colors">
+                          {game.name}
+                        </h4>
+                        {game.popularity < 50 && (
+                          <span className="flex-shrink-0 text-neon-orange text-xs sm:text-sm" title="Hidden Gem">
+                            💎
+                          </span>
+                        )}
                       </div>
                     </div>
-                  </div>
+                  </a>
                 ))}
+              </div>
+
+              {/* Hidden Gem indicator */}
+              <div className="mt-3 sm:mt-4 flex items-center justify-center text-[10px] font-mono text-gray-500">
+                <span className="flex items-center gap-1.5">
+                  <span className="text-sm">💎</span>
+                  = Hidden gems our AI found
+                </span>
               </div>
 
               {/* CTA */}
