@@ -16,10 +16,10 @@ const exampleQueries = [
   {
     query: "atmospheric horror like Resident Evil",
     results: [
-      { appId: '1196590', name: 'Dead Space', score: 96 },
+      { appId: '268050', name: 'The Evil Within', score: 96 },
       { appId: '214490', name: 'Alien: Isolation', score: 93 },
       { appId: '282140', name: 'SOMA', score: 90 },
-      { appId: '57300', name: 'Amnesia: The Dark Descent', score: 88 },
+      { appId: '238320', name: 'Outlast', score: 88 },
     ]
   },
   {
