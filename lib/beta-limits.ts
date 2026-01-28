@@ -15,7 +15,7 @@ import { NextResponse } from 'next/server';
 
 // Configuration
 export const FREE_SEARCH_LIMIT = 5;
-export const ANONYMOUS_SEARCH_LIMIT = 1;
+export const ANONYMOUS_SEARCH_LIMIT = 4;
 
 // Credit packages
 export const CREDIT_PACKAGES = {

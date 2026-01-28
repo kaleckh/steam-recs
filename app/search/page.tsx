@@ -14,7 +14,7 @@ interface SearchFilters {
 
 const LOADING_WORDS = ['SEARCHING', 'CHECKING', 'LOOTING', 'BROWSING', 'SCANNING', 'ANALYZING'];
 const ANONYMOUS_SEARCH_KEY = 'anonymous_searches_used';
-const ANONYMOUS_SEARCH_LIMIT = 1;
+const ANONYMOUS_SEARCH_LIMIT = 4;
 
 interface SearchResult {
   appId: string;
@@ -519,45 +519,51 @@ function SearchContent() {
           {/* Credit Usage Bar */}
           {userId && (
             <div className="mt-3 flex items-center gap-3">
-              <div className="flex-1 max-w-xs">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] sm:text-xs font-mono text-gray-500">
-                    {creditsLoading ? (
-                      'Loading credits...'
-                    ) : searchCredits ? (
-                      `Free searches: ${searchCredits.freeSearchesUsed}/${searchCredits.freeLimit}`
-                    ) : (
-                      'Free searches: 0/5'
-                    )}
+              {creditsLoading ? (
+                <span className="text-[10px] sm:text-xs font-mono text-gray-500">Loading credits...</span>
+              ) : searchCredits && searchCredits.purchasedCredits > 0 ? (
+                // Paid user - show credits remaining
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] sm:text-xs font-mono text-neon-green">
+                    {searchCredits.purchasedCredits} credits remaining
                   </span>
-                  {searchCredits && searchCredits.purchasedCredits > 0 && (
-                    <span className="text-[10px] sm:text-xs font-mono text-neon-green">
-                      +{searchCredits.purchasedCredits} credits
+                </div>
+              ) : (
+                // Free user - show free searches bar
+                <>
+                  <div className="flex-1 max-w-xs">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] sm:text-xs font-mono text-gray-500">
+                        {searchCredits
+                          ? `Free searches: ${searchCredits.freeSearchesUsed}/${searchCredits.freeLimit}`
+                          : 'Free searches: 0/5'
+                        }
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-terminal-dark border border-terminal-border rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-500 ${
+                          !searchCredits ? 'bg-neon-cyan' :
+                          searchCredits.freeSearchesUsed >= searchCredits.freeLimit
+                            ? 'bg-red-500'
+                            : searchCredits.freeSearchesUsed >= searchCredits.freeLimit - 2
+                              ? 'bg-neon-orange'
+                              : 'bg-neon-cyan'
+                        }`}
+                        style={{
+                          width: searchCredits
+                            ? `${Math.min(100, (searchCredits.freeSearchesUsed / searchCredits.freeLimit) * 100)}%`
+                            : '0%',
+                        }}
+                      />
+                    </div>
+                  </div>
+                  {searchCredits && searchCredits.totalRemaining <= 2 && (
+                    <span className="text-[10px] sm:text-xs font-mono text-neon-orange animate-pulse">
+                      Running low!
                     </span>
                   )}
-                </div>
-                <div className="h-1.5 bg-terminal-dark border border-terminal-border rounded-full overflow-hidden">
-                  <div
-                    className={`h-full transition-all duration-500 ${
-                      !searchCredits ? 'bg-neon-cyan' :
-                      searchCredits.freeSearchesUsed >= searchCredits.freeLimit
-                        ? 'bg-red-500'
-                        : searchCredits.freeSearchesUsed >= searchCredits.freeLimit - 2
-                          ? 'bg-neon-orange'
-                          : 'bg-neon-cyan'
-                    }`}
-                    style={{
-                      width: searchCredits
-                        ? `${Math.min(100, (searchCredits.freeSearchesUsed / searchCredits.freeLimit) * 100)}%`
-                        : '0%',
-                    }}
-                  />
-                </div>
-              </div>
-              {searchCredits && searchCredits.totalRemaining <= 2 && searchCredits.purchasedCredits === 0 && (
-                <span className="text-[10px] sm:text-xs font-mono text-neon-orange animate-pulse">
-                  Running low!
-                </span>
+                </>
               )}
             </div>
           )}
