@@ -1,10 +1,90 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 interface SteamInputProps {
   onSubmit: (steamInput: string) => void;
   isLoading?: boolean;
+}
+
+type ValidationResult = {
+  isValid: boolean;
+  type: 'steam_id' | 'custom_url' | 'profile_url' | 'invalid' | 'empty';
+  message: string;
+  formatted?: string;
+};
+
+function validateSteamInput(input: string): ValidationResult {
+  const trimmed = input.trim();
+
+  if (!trimmed) {
+    return { isValid: false, type: 'empty', message: '' };
+  }
+
+  // Check if input is purely numeric first - must be a valid Steam ID
+  if (/^\d+$/.test(trimmed)) {
+    if (trimmed.length === 17 && trimmed.startsWith('7656')) {
+      return {
+        isValid: true,
+        type: 'steam_id',
+        message: 'Valid Steam ID',
+        formatted: trimmed
+      };
+    }
+    if (trimmed.length === 17) {
+      return {
+        isValid: false,
+        type: 'invalid',
+        message: 'Steam IDs start with 7656'
+      };
+    }
+    return {
+      isValid: false,
+      type: 'invalid',
+      message: 'Steam ID must be exactly 17 digits starting with 7656'
+    };
+  }
+
+  // Check for full URL formats
+  const customUrlPattern = /^(?:https?:\/\/)?(?:www\.)?steamcommunity\.com\/id\/([a-zA-Z0-9_-]+)\/?$/;
+  const profileUrlPattern = /^(?:https?:\/\/)?(?:www\.)?steamcommunity\.com\/profiles\/(7656\d{13})\/?$/;
+
+  const customMatch = trimmed.match(customUrlPattern);
+  if (customMatch) {
+    return {
+      isValid: true,
+      type: 'custom_url',
+      message: 'Valid Steam profile URL',
+      formatted: customMatch[1]
+    };
+  }
+
+  const profileMatch = trimmed.match(profileUrlPattern);
+  if (profileMatch) {
+    return {
+      isValid: true,
+      type: 'profile_url',
+      message: 'Valid Steam profile URL',
+      formatted: profileMatch[1]
+    };
+  }
+
+  // Check for invalid URL attempts (has steamcommunity but wrong format)
+  if (trimmed.includes('steamcommunity.com')) {
+    return {
+      isValid: false,
+      type: 'invalid',
+      message: 'Use format: steamcommunity.com/id/username or /profiles/ID'
+    };
+  }
+
+  // Reject standalone usernames - require full URL for clarity
+  // This prevents "asdf" from being accepted
+  return {
+    isValid: false,
+    type: 'invalid',
+    message: 'Paste your full Steam profile URL or 17-digit Steam ID'
+  };
 }
 
 export default function SteamInput({ onSubmit, isLoading }: SteamInputProps) {
@@ -12,10 +92,12 @@ export default function SteamInput({ onSubmit, isLoading }: SteamInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
 
+  const validation = useMemo(() => validateSteamInput(input), [input]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.trim()) {
-      onSubmit(input.trim());
+    if (validation.isValid && validation.formatted) {
+      onSubmit(validation.formatted);
     }
   };
 
@@ -161,7 +243,7 @@ export default function SteamInput({ onSubmit, isLoading }: SteamInputProps) {
               <span className="text-gray-400 ml-2">./analyze_profile.sh</span>
             </p>
             <p className="text-gray-400 font-mono text-sm">
-              &gt; Paste your Steam profile URL or Steam ID below
+              &gt; Paste your <span className="text-neon-cyan">Steam profile URL</span> or <span className="text-neon-orange">Steam ID</span> below
             </p>
           </div>
 
@@ -181,9 +263,15 @@ export default function SteamInput({ onSubmit, isLoading }: SteamInputProps) {
                 placeholder="steamcommunity.com/id/yourname"
                 disabled={isLoading}
                 className={`
-                  w-full pl-10 pr-6 py-4
+                  w-full pl-10 pr-12 py-4
                   bg-terminal-dark
-                  border-2 ${isFocused ? 'border-neon-cyan box-glow-cyan' : 'border-terminal-border'}
+                  border-2 ${
+                    validation.type === 'empty'
+                      ? isFocused ? 'border-neon-cyan box-glow-cyan' : 'border-terminal-border'
+                      : validation.isValid
+                        ? 'border-neon-green box-glow-green'
+                        : 'border-red-500'
+                  }
                   rounded-lg
                   text-neon-cyan font-mono text-base
                   placeholder:text-gray-600
@@ -193,10 +281,45 @@ export default function SteamInput({ onSubmit, isLoading }: SteamInputProps) {
                 `}
                 aria-label="Enter your Steam profile URL or Steam ID"
               />
+              {/* Validation indicator */}
+              {input && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  {validation.isValid ? (
+                    <svg className="w-5 h-5 text-neon-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  )}
+                </div>
+              )}
               {isFocused && !input && (
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-5 bg-neon-cyan animate-pulse" />
               )}
             </div>
+
+            {/* Validation message */}
+            {input && validation.message && (
+              <div className={`text-xs font-mono ${validation.isValid ? 'text-neon-green' : 'text-red-400'}`}>
+                {validation.isValid ? (
+                  <span className="flex items-center gap-1">
+                    <span className="text-gray-500">[</span>
+                    {validation.message}
+                    {validation.type === 'steam_id' && (
+                      <span className="text-neon-orange ml-1">Steam ID</span>
+                    )}
+                    {(validation.type === 'custom_url' || validation.type === 'profile_url') && (
+                      <span className="text-neon-cyan ml-1">Profile URL</span>
+                    )}
+                    <span className="text-gray-500">]</span>
+                  </span>
+                ) : (
+                  <span>{validation.message}</span>
+                )}
+              </div>
+            )}
 
             {/* Example formats */}
             <div className="flex flex-wrap gap-2 text-xs font-mono">
@@ -204,15 +327,15 @@ export default function SteamInput({ onSubmit, isLoading }: SteamInputProps) {
               <button
                 type="button"
                 onClick={() => setInput('steamcommunity.com/id/yourname')}
-                className="text-gray-500 hover:text-neon-cyan transition-colors"
+                className="text-neon-cyan/70 hover:text-neon-cyan transition-colors"
               >
-                /id/yourname
+                steamcommunity.com/id/yourname
               </button>
               <span className="text-gray-700">|</span>
               <button
                 type="button"
                 onClick={() => setInput('76561198012345678')}
-                className="text-gray-500 hover:text-neon-cyan transition-colors"
+                className="text-neon-orange/70 hover:text-neon-orange transition-colors"
               >
                 76561198012345678
               </button>
@@ -221,7 +344,7 @@ export default function SteamInput({ onSubmit, isLoading }: SteamInputProps) {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading || !input.trim()}
+              disabled={isLoading || !validation.isValid}
               className="w-full btn-arcade btn-arcade-green rounded-lg py-4 text-lg disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:transform-none disabled:hover:shadow-none"
             >
               {isLoading ? (

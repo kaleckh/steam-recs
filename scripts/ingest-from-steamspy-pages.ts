@@ -32,6 +32,7 @@ interface ScriptOptions {
   numPages: number;
   concurrency: number;
   skipExisting: boolean;
+  minReviews: number;
 }
 
 interface SteamSpyGameData {
@@ -50,6 +51,7 @@ function parseArgs(): ScriptOptions {
     numPages: 10,
     concurrency: 3,
     skipExisting: true,
+    minReviews: 0,
   };
 
   for (const arg of args) {
@@ -59,6 +61,8 @@ function parseArgs(): ScriptOptions {
       options.numPages = parseInt(arg.split('=')[1], 10);
     } else if (arg.startsWith('--concurrency=')) {
       options.concurrency = parseInt(arg.split('=')[1], 10);
+    } else if (arg.startsWith('--min-reviews=')) {
+      options.minReviews = parseInt(arg.split('=')[1], 10);
     } else if (arg === '--no-skip-existing') {
       options.skipExisting = false;
     } else if (arg === '--help' || arg === '-h') {
@@ -86,6 +90,7 @@ Usage:
 Options:
   --start-page=N     Starting page number (default: 0)
   --pages=N          Number of pages to fetch (default: 10)
+  --min-reviews=N    Only ingest games with N+ total reviews (default: 0)
   --concurrency=N    Parallel workers for game ingestion (default: 3)
   --no-skip-existing Re-ingest games that already exist
   --help, -h         Show this help message
@@ -93,6 +98,9 @@ Options:
 Examples:
   # First 10 pages (10,000 games)
   tsx scripts/ingest-from-steamspy-pages.ts --pages=10
+
+  # Only games with 50+ reviews (filters out abandoned/test games)
+  tsx scripts/ingest-from-steamspy-pages.ts --pages=200 --min-reviews=50
 
   # Continue from page 10
   tsx scripts/ingest-from-steamspy-pages.ts --start-page=10 --pages=10
@@ -353,6 +361,7 @@ async function main() {
   console.log(`Starting page: ${options.startPage}`);
   console.log(`Number of pages: ${options.numPages}`);
   console.log(`Expected games: ~${options.numPages * 1000}`);
+  console.log(`Min reviews filter: ${options.minReviews > 0 ? options.minReviews + '+' : 'None'}`);
   console.log(`Concurrency: ${options.concurrency} parallel workers`);
   console.log(`Skip existing: ${options.skipExisting ? 'Yes' : 'No'}`);
   console.log('');
@@ -363,6 +372,7 @@ async function main() {
 
   try {
     let totalAppIdsFetched = 0;
+    let totalAfterReviewFilter = 0;
     let totalProcessed = 0;
     let successCount = 0;
     let skipCount = 0;
@@ -386,11 +396,24 @@ async function main() {
         break;
       }
 
-      let appIds = games.map(g => g.appid);
-      totalAppIdsFetched += appIds.length;
+      // Filter by minimum reviews if specified
+      let filteredGames = games;
+      if (options.minReviews > 0) {
+        filteredGames = games.filter(g => {
+          const totalReviews = (g.positive || 0) + (g.negative || 0);
+          return totalReviews >= options.minReviews;
+        });
+      }
+
+      let appIds = filteredGames.map(g => g.appid);
+      totalAppIdsFetched += games.length;
+      totalAfterReviewFilter += filteredGames.length;
 
       const elapsed = ((Date.now() - pageStartTime) / 1000).toFixed(1);
-      console.log(`[Page ${page}] ✓ Fetched ${appIds.length} AppIDs in ${elapsed}s`);
+      const filterInfo = options.minReviews > 0
+        ? ` (${filteredGames.length} with ${options.minReviews}+ reviews)`
+        : '';
+      console.log(`[Page ${page}] ✓ Fetched ${games.length} AppIDs in ${elapsed}s${filterInfo}`);
 
       // Filter existing games for this page
       if (options.skipExisting) {
@@ -443,6 +466,11 @@ async function main() {
     console.log('='.repeat(70));
     console.log(`Pages fetched:         ${options.numPages}`);
     console.log(`AppIDs fetched:        ${totalAppIdsFetched.toLocaleString()}`);
+    if (options.minReviews > 0) {
+      const filtered = totalAppIdsFetched - totalAfterReviewFilter;
+      console.log(`Filtered (< ${options.minReviews} reviews): ${filtered.toLocaleString()}`);
+      console.log(`After review filter:   ${totalAfterReviewFilter.toLocaleString()}`);
+    }
     console.log(`AppIDs processed:      ${totalProcessed.toLocaleString()}`);
     console.log(`Successfully ingested: ${successCount.toLocaleString()} games`);
     console.log(`Skipped (not games):   ${skipCount.toLocaleString()}`);

@@ -105,6 +105,9 @@ function SearchContent() {
   const [searchCredits, setSearchCredits] = useState<SearchCredits | null>(null);
   const [creditsLoading, setCreditsLoading] = useState(true);
 
+  // Total games indexed
+  const [totalGamesIndexed, setTotalGamesIndexed] = useState<number | null>(null);
+
   // Anonymous user tracking
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [anonymousSearchesUsed, setAnonymousSearchesUsed] = useState(0);
@@ -148,6 +151,18 @@ function SearchContent() {
       .catch(console.error)
       .finally(() => setCreditsLoading(false));
   }, [userId]);
+
+  // Fetch total games count on mount
+  useEffect(() => {
+    fetch('/api/stats/overview')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.games?.total) {
+          setTotalGamesIndexed(data.games.total);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   // Save state to localStorage for tab persistence
   useEffect(() => {
@@ -493,6 +508,14 @@ function SearchContent() {
             </button>
             <span className="text-terminal-border">|</span>
             <span className="text-neon-orange font-mono text-[10px] sm:text-xs tracking-wider">AI_SEARCH.exe</span>
+            {totalGamesIndexed && (
+              <>
+                <span className="text-terminal-border hidden sm:inline">|</span>
+                <span className="hidden sm:inline px-1.5 py-0.5 bg-neon-green/10 border border-neon-green/30 text-neon-green rounded text-[9px] sm:text-[10px] font-mono">
+                  {totalGamesIndexed.toLocaleString()} games indexed
+                </span>
+              </>
+            )}
           </div>
 
           {/* Search Form */}
@@ -525,7 +548,9 @@ function SearchContent() {
                 // Paid user - show credits remaining
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] sm:text-xs font-mono text-neon-green">
-                    {searchCredits.purchasedCredits} credits remaining
+                    {searchCredits.purchasedCredits >= 999999
+                      ? '✨ Unlimited searches'
+                      : `${searchCredits.purchasedCredits} credits remaining`}
                   </span>
                 </div>
               ) : (
@@ -592,7 +617,7 @@ function SearchContent() {
               <p className="text-gray-500 font-mono text-xs sm:text-sm mb-4 line-clamp-1">"{query}"</p>
               <div className="border-t border-terminal-border pt-3 sm:pt-4 mt-3 sm:mt-4">
                 <p className="text-neon-cyan font-mono text-sm sm:text-base leading-relaxed mb-1">
-                  Analyzing <span className="text-white font-bold">60,000+</span> games
+                  Analyzing <span className="text-white font-bold">{totalGamesIndexed ? totalGamesIndexed.toLocaleString() : '...'}</span> games
                 </p>
                 <p className="text-gray-400 font-mono text-xs sm:text-sm mb-4">
                   <span className="text-neon-orange">Accuracy takes a moment.</span> We're finding the <span className="text-neon-green">perfect</span> matches.
@@ -676,9 +701,14 @@ function SearchContent() {
               <h2 className="orbitron text-lg sm:text-2xl font-bold text-white mb-2 sm:mb-4">
                 <span className="text-neon-cyan">&gt;</span> AI-POWERED SEARCH
               </h2>
-              <p className="text-gray-400 font-mono text-xs sm:text-sm mb-4 sm:mb-6">
+              <p className="text-gray-400 font-mono text-xs sm:text-sm mb-2">
                 Describe what you're looking for in natural language.
               </p>
+              {totalGamesIndexed && (
+                <p className="text-neon-green font-mono text-xs sm:text-sm mb-4 sm:mb-6">
+                  Searching through <span className="text-white font-bold">{totalGamesIndexed.toLocaleString()}</span> games
+                </p>
+              )}
               <div className="space-y-2 text-left">
                 <p className="text-neon-orange font-mono text-[10px] sm:text-xs uppercase tracking-wider mb-2 sm:mb-3">Example queries:</p>
                 {[
@@ -726,60 +756,85 @@ function SearchContent() {
                 <span className="text-neon-green">&gt;</span> Results for: <span className="text-neon-cyan">"{query}"</span>
               </p>
 
-              {/* Compact Filters */}
-              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4 p-3 bg-terminal-dark/50 border border-terminal-border rounded-lg">
-                {/* Popularity Slider */}
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] sm:text-xs font-mono text-gray-500 min-w-[70px] sm:min-w-0">
-                    {filters.popularityScore === 50
-                      ? 'Balanced'
-                      : filters.popularityScore < 50
-                        ? 'Hidden Gems'
-                        : 'Popular'}
-                  </span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="10"
-                    value={filters.popularityScore}
-                    onChange={(e) =>
-                      setFilters(prev => ({ ...prev, popularityScore: parseInt(e.target.value) }))
-                    }
-                    className="flex-1 sm:flex-none sm:w-20 h-1.5 bg-terminal-border rounded appearance-none cursor-pointer accent-neon-cyan"
-                  />
+              {/* Filters */}
+              <div className="p-3 sm:p-4 bg-terminal-dark/50 border border-terminal-border rounded-lg space-y-3 sm:space-y-4">
+                {/* Popularity Slider - More Prominent */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] sm:text-xs font-mono text-gray-400 uppercase tracking-wider">
+                      Discovery Mode
+                    </span>
+                    <span className={`text-[10px] sm:text-xs font-mono px-2 py-0.5 rounded ${
+                      filters.popularityScore < 40
+                        ? 'bg-neon-orange/20 text-neon-orange border border-neon-orange/30'
+                        : filters.popularityScore > 60
+                          ? 'bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/30'
+                          : 'bg-gray-700/50 text-gray-400 border border-gray-600'
+                    }`}>
+                      {filters.popularityScore < 40
+                        ? '💎 Hidden Gems'
+                        : filters.popularityScore > 60
+                          ? '🔥 Popular'
+                          : 'Balanced'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs sm:text-sm" title="Hidden Gems">💎</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="10"
+                      value={filters.popularityScore}
+                      onChange={(e) =>
+                        setFilters(prev => ({ ...prev, popularityScore: parseInt(e.target.value) }))
+                      }
+                      className="flex-1 h-2 bg-gradient-to-r from-neon-orange/30 via-gray-600 to-neon-cyan/30 rounded appearance-none cursor-pointer accent-white [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:shadow-lg"
+                    />
+                    <span className="text-xs sm:text-sm" title="Popular">🔥</span>
+                  </div>
+                  <p className="text-[10px] font-mono text-gray-600">
+                    {filters.popularityScore < 40
+                      ? 'Find lesser-known games others might miss'
+                      : filters.popularityScore > 60
+                        ? 'Show widely-played mainstream titles'
+                        : 'Mix of popular and hidden gems'}
+                  </p>
                 </div>
 
-                {/* Min Review Score */}
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] sm:text-xs font-mono text-gray-500 min-w-[70px] sm:min-w-0">
-                    Min {filters.minReviewScore}%
-                  </span>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="10"
-                    value={filters.minReviewScore}
-                    onChange={(e) =>
-                      setFilters(prev => ({ ...prev, minReviewScore: parseInt(e.target.value) }))
-                    }
-                    className="flex-1 sm:flex-none sm:w-20 h-1.5 bg-terminal-border rounded appearance-none cursor-pointer accent-neon-cyan"
-                  />
-                </div>
+                {/* Other filters row */}
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-2 border-t border-terminal-border/50">
+                  {/* Min Review Score */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] sm:text-xs font-mono text-gray-500">
+                      Min Rating: {filters.minReviewScore}%
+                    </span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="10"
+                      value={filters.minReviewScore}
+                      onChange={(e) =>
+                        setFilters(prev => ({ ...prev, minReviewScore: parseInt(e.target.value) }))
+                      }
+                      className="w-16 sm:w-20 h-1.5 bg-terminal-border rounded appearance-none cursor-pointer accent-neon-green"
+                    />
+                  </div>
 
-                {/* Free to Play */}
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.isFree === true}
-                    onChange={(e) =>
-                      setFilters(prev => ({ ...prev, isFree: e.target.checked ? true : undefined }))
-                    }
-                    className="w-3.5 h-3.5 rounded border-terminal-border bg-terminal-dark accent-neon-green"
-                  />
-                  <span className="text-[10px] sm:text-xs font-mono text-gray-500">Free only</span>
-                </label>
+                  {/* Free to Play */}
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filters.isFree === true}
+                      onChange={(e) =>
+                        setFilters(prev => ({ ...prev, isFree: e.target.checked ? true : undefined }))
+                      }
+                      className="w-3.5 h-3.5 rounded border-terminal-border bg-terminal-dark accent-neon-green"
+                    />
+                    <span className="text-[10px] sm:text-xs font-mono text-gray-500">Free only</span>
+                  </label>
+                </div>
               </div>
             </div>
 

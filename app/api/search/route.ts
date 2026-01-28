@@ -60,7 +60,7 @@ async function analyzeQuery(query: string, previousRefinements: string[] = []): 
     : '';
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-3.5-turbo', // Faster than gpt-4o-mini for simple classification
     messages: [
       {
         role: 'system',
@@ -102,7 +102,7 @@ Return JSON only:
     ],
     response_format: { type: 'json_object' },
     temperature: 0.3,
-    max_tokens: 500,
+    max_tokens: 350, // Reduced for speed
   });
 
   const content = response.choices[0]?.message?.content || '{}';
@@ -446,14 +446,22 @@ export async function GET(request: NextRequest) {
 
       const vectorString = `[${queryEmbedding.join(',')}]`;
 
-      // Step 2: Get user's owned games to exclude (if userId provided)
+      // Step 2: Get user's owned games and hidden games to exclude (if userId provided)
       let excludeAppIds: bigint[] = [];
       if (userId) {
+        // Get owned games
         const ownedGames = await prisma.userGame.findMany({
           where: { userId },
           select: { appId: true },
         });
         excludeAppIds = ownedGames.map(g => g.appId);
+
+        // Get hidden games
+        const hiddenGames = await prisma.userFeedback.findMany({
+          where: { userId, feedbackType: 'hidden' },
+          select: { appId: true },
+        });
+        excludeAppIds.push(...hiddenGames.map(g => g.appId));
       }
 
       // Also exclude the matched game itself (don't recommend the same game back)
@@ -477,8 +485,9 @@ export async function GET(request: NextRequest) {
 
       const whereClause = Prisma.sql`WHERE ${Prisma.join(filterConditions, ' AND ')}`;
 
-      // Step 3: Retrieve top 50 candidates from pgvector
-      const candidateLimit = 50;
+      // Step 3: Retrieve top candidates from pgvector
+      // Balance between quality (more candidates) and speed (fewer = faster LLM call)
+      const candidateLimit = 100;
       const candidates = await prisma.$queryRaw<
         Array<{
           app_id: bigint;
@@ -506,8 +515,166 @@ export async function GET(request: NextRequest) {
         LIMIT ${candidateLimit}
       `;
 
+      // Step 3b: Hybrid search - supplement vector results with keyword-based search
+      // This catches games where the Steam description doesn't match the query semantically
+      // but the game content matches (e.g., "arpg dual wield pistols" -> Borderlands)
+      const queryLower = query.toLowerCase();
+
+      // Detect weapon/combat type keywords (using \b only at start to allow plurals)
+      const hasGunKeywords = /\b(guns?|pistols?|rifles?|shooters?|fps|tps|shoot|firearms?|bullets?)/i.test(queryLower);
+      const hasRpgKeywords = /\b(arpg|action.?rpg|rpgs?|diablo|role.?playing|loot|looter)/i.test(queryLower);
+      const hasMeleeKeywords = /\b(swords?|melee|hack.?and.?slash|slashing)/i.test(queryLower);
+      const hasHorrorKeywords = /\b(horror|scary|survival.?horror|psychological)/i.test(queryLower);
+      const hasRoguelikeKeywords = /\b(roguelikes?|roguelites?|procedural|permadeath)/i.test(queryLower);
+
+      // Get existing app_ids from vector results
+      const vectorAppIds = candidates.map(c => c.app_id);
+
+      // Build supplementary query based on detected keywords
+      let keywordCandidates: typeof candidates = [];
+
+      // If query mentions guns/shooting + RPG elements, find looter shooters and gun-based RPGs
+      if (hasGunKeywords && hasRpgKeywords) {
+        console.log(`[AI Search] Hybrid search: finding gun-based RPGs`);
+
+        keywordCandidates = await prisma.$queryRaw<typeof candidates>`
+          SELECT
+            app_id,
+            name,
+            0.5 as distance,
+            release_year,
+            review_positive_pct,
+            review_count,
+            is_free,
+            metadata
+          FROM games
+          WHERE embedding IS NOT NULL
+            AND (
+              metadata->>'short_description' ILIKE '%pistol%'
+              OR metadata->>'short_description' ILIKE '%gun%'
+              OR metadata->>'short_description' ILIKE '%shoot%'
+              OR metadata->'tags' @> '"FPS"'
+              OR metadata->'tags' @> '"Looter Shooter"'
+              OR metadata->'tags' @> '"Third-Person Shooter"'
+            )
+            AND (
+              metadata->'genres' @> '["RPG"]'::jsonb
+              OR metadata->'tags' @> '"Action RPG"'
+              OR metadata->'tags' @> '"RPG"'
+            )
+            ${excludeAppIds.length > 0 ? Prisma.sql`AND app_id != ALL(ARRAY[${Prisma.join(
+              excludeAppIds.map(id => Prisma.sql`${id}`),
+              ','
+            )}]::bigint[])` : Prisma.empty}
+            AND app_id != ALL(ARRAY[${Prisma.join(
+              vectorAppIds.map(id => Prisma.sql`${id}`),
+              ','
+            )}]::bigint[])
+          ORDER BY review_count DESC NULLS LAST
+          LIMIT 40
+        `;
+      } else if (hasRpgKeywords && hasMeleeKeywords) {
+        console.log(`[AI Search] Hybrid search: finding melee ARPGs`);
+
+        keywordCandidates = await prisma.$queryRaw<typeof candidates>`
+          SELECT
+            app_id,
+            name,
+            0.5 as distance,
+            release_year,
+            review_positive_pct,
+            review_count,
+            is_free,
+            metadata
+          FROM games
+          WHERE embedding IS NOT NULL
+            AND (
+              metadata->'tags' @> '"Action RPG"'
+              OR metadata->'tags' @> '"Hack and Slash"'
+            )
+            ${excludeAppIds.length > 0 ? Prisma.sql`AND app_id != ALL(ARRAY[${Prisma.join(
+              excludeAppIds.map(id => Prisma.sql`${id}`),
+              ','
+            )}]::bigint[])` : Prisma.empty}
+            AND app_id != ALL(ARRAY[${Prisma.join(
+              vectorAppIds.map(id => Prisma.sql`${id}`),
+              ','
+            )}]::bigint[])
+          ORDER BY review_count DESC NULLS LAST
+          LIMIT 40
+        `;
+      } else if (hasRoguelikeKeywords) {
+        console.log(`[AI Search] Hybrid search: finding roguelikes`);
+
+        keywordCandidates = await prisma.$queryRaw<typeof candidates>`
+          SELECT
+            app_id,
+            name,
+            0.5 as distance,
+            release_year,
+            review_positive_pct,
+            review_count,
+            is_free,
+            metadata
+          FROM games
+          WHERE embedding IS NOT NULL
+            AND (
+              metadata->'tags' @> '"Roguelike"'
+              OR metadata->'tags' @> '"Roguelite"'
+            )
+            ${excludeAppIds.length > 0 ? Prisma.sql`AND app_id != ALL(ARRAY[${Prisma.join(
+              excludeAppIds.map(id => Prisma.sql`${id}`),
+              ','
+            )}]::bigint[])` : Prisma.empty}
+            AND app_id != ALL(ARRAY[${Prisma.join(
+              vectorAppIds.map(id => Prisma.sql`${id}`),
+              ','
+            )}]::bigint[])
+          ORDER BY review_count DESC NULLS LAST
+          LIMIT 40
+        `;
+      } else if (hasHorrorKeywords) {
+        console.log(`[AI Search] Hybrid search: finding horror games`);
+
+        keywordCandidates = await prisma.$queryRaw<typeof candidates>`
+          SELECT
+            app_id,
+            name,
+            0.5 as distance,
+            release_year,
+            review_positive_pct,
+            review_count,
+            is_free,
+            metadata
+          FROM games
+          WHERE embedding IS NOT NULL
+            AND (
+              metadata->'tags' @> '"Horror"'
+              OR metadata->'tags' @> '"Psychological Horror"'
+              OR metadata->'tags' @> '"Survival Horror"'
+            )
+            ${excludeAppIds.length > 0 ? Prisma.sql`AND app_id != ALL(ARRAY[${Prisma.join(
+              excludeAppIds.map(id => Prisma.sql`${id}`),
+              ','
+            )}]::bigint[])` : Prisma.empty}
+            AND app_id != ALL(ARRAY[${Prisma.join(
+              vectorAppIds.map(id => Prisma.sql`${id}`),
+              ','
+            )}]::bigint[])
+          ORDER BY review_count DESC NULLS LAST
+          LIMIT 40
+        `;
+      }
+
+      if (keywordCandidates.length > 0) {
+        console.log(`[AI Search] Added ${keywordCandidates.length} keyword-based candidates`);
+      }
+
+      // Combine vector and keyword candidates (vector results first, then keyword supplements)
+      const allCandidates = [...candidates, ...keywordCandidates];
+
       // Transform candidates for LLM
-      const gameCandidates: GameCandidate[] = candidates.map(game => {
+      const gameCandidates: GameCandidate[] = allCandidates.map(game => {
         const metadata = game.metadata || {};
         const priceOverview = metadata.price_overview as any;
 
@@ -520,7 +687,7 @@ export async function GET(request: NextRequest) {
 
         let tags: string[] = [];
         if (metadata.tags && Array.isArray(metadata.tags)) {
-          tags = metadata.tags.slice(0, 10);
+          tags = metadata.tags.slice(0, 6); // Reduced from 10 for faster LLM processing
         }
 
         let categories: string[] = [];
@@ -551,44 +718,28 @@ export async function GET(request: NextRequest) {
       console.log(`[AI Search] Retrieved ${gameCandidates.length} candidates`);
 
       // Step 4: Use GPT-4o-mini to filter and rank
+      // Compact format to reduce tokens and speed up LLM call
       const gameList = gameCandidates.map((g, i) => {
-        const info = [
-          `${i + 1}. "${g.name}" (ID: ${g.appId})`,
-          g.genres?.length ? `   Genres: ${g.genres.join(', ')}` : null,
-          g.categories?.length ? `   Features: ${g.categories.join(', ')}` : null,
-          g.tags?.length ? `   Tags: ${g.tags.join(', ')}` : null,
-          g.reviewScore ? `   Reviews: ${g.reviewScore}% positive` : null,
-          g.releaseYear ? `   Year: ${g.releaseYear}` : null,
-          g.shortDescription ? `   Desc: ${g.shortDescription.slice(0, 150)}...` : null,
-        ].filter(Boolean).join('\n');
-        return info;
-      }).join('\n\n');
+        const parts = [
+          `${i + 1}. "${g.name}" [${g.appId}]`,
+          g.tags?.length ? `Tags: ${g.tags.join(', ')}` : null,
+          g.reviewScore ? `${g.reviewScore}%` : null,
+          g.releaseYear ? `(${g.releaseYear})` : null,
+          g.shortDescription ? `- ${g.shortDescription.slice(0, 100)}` : null,
+        ].filter(Boolean);
+        return parts.join(' | ');
+      }).join('\n');
 
       const resultLimit = Math.min(limit, 15);
 
-      const systemPrompt = `You are a game recommendation expert. Given a user's search query and a list of candidate games, select UP TO ${resultLimit} games that match what the user is looking for.
+      const systemPrompt = `Select UP TO ${resultLimit} Steam games matching the user's search. Return JSON: {"results":[{"appId":"ID","reason":"brief why"}]}
 
-IMPORTANT CONTEXT:
-- ALL games in this list are digital Steam PC games (not physical products)
-- When users reference board games (like "Risk" or "Catan"), recommend digital strategy games with similar mechanics
-- "Not a board game" means they want video games, which ALL these candidates are - interpret generously
-- Be lenient - if a game captures the spirit of what they want, include it
-
-Consider:
-- Gameplay style, mechanics, and "vibes" the user is describing
-- Genre preferences (explicit or implied)
-- Quality indicators (review scores)
-- Any specific requirements mentioned in the query
-- The "Features" field contains Steam categories like "Co-op", "Multi-player", "Online Co-op", "4-player local", etc.
-
-Return a JSON object with a "results" array containing objects with:
-- "appId": the game's ID (string)
-- "reason": a brief (1 sentence) explanation of why this game matches
-
-Example response:
-{"results": [{"appId": "123456", "reason": "Cozy farming sim with light combat mechanics"}, ...]}
-
-CRITICAL: Always return at least 5-10 games unless the query is impossibly specific. For broad queries, aim for ${resultLimit} games. An empty result set is almost never correct - there's usually something that fits.`;
+Rules:
+- Match camera perspective (isometric/sidescroller/FPS/TPS) exactly if specified
+- For weapons (guns/pistols), include any shooter/looter-shooter - most support various guns
+- Be generous - include games where genre fits even if specific mechanic not mentioned
+- Tags are key indicators (Looter Shooter, Action RPG, FPS, etc.)
+- Prefer returning MORE matches over being too selective`;
 
       const userPrompt = `User's search: "${query}"
 
@@ -645,8 +796,9 @@ Select the best matches and explain why each fits the user's request.`;
       console.log(`[AI Search] Returning ${results.length} results`);
 
       // Consume search credit for logged-in users (only on first round to avoid double-counting refinements)
+      // Only consume credit if we actually found results
       let creditConsumed = null;
-      if (userId && conversationContext.round === 1) {
+      if (userId && conversationContext.round === 1 && results.length > 0) {
         creditConsumed = await consumeSearchCredit(userId);
       }
 

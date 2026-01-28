@@ -7,6 +7,7 @@ interface SearchFilters {
   minReviewScore: number;
   popularityScore: number;
   isFree?: boolean;
+  sortBy: 'relevance' | 'rating' | 'release' | 'price';
 }
 
 interface TasteProfile {
@@ -118,6 +119,8 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
   const [loadingWordIndex, setLoadingWordIndex] = useState(0);
   const [hasSearched, setHasSearched] = useState(false);
   const [tasteProfile, setTasteProfile] = useState<TasteProfile | null>(null);
+  const [hiddenGameIds, setHiddenGameIds] = useState<Set<string>>(new Set());
+  const [totalGamesIndexed, setTotalGamesIndexed] = useState<number | null>(null);
 
   // Multi-question refinement state - now uses multi-select
   const [selectedAnswers, setSelectedAnswers] = useState<Set<string>>(new Set());
@@ -127,14 +130,17 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
     minReviewScore: 0,
     popularityScore: 50,
     isFree: undefined,
+    sortBy: 'relevance',
   });
 
   // Abort controller for cancelling searches
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Filter results
+  // Filter and sort results
   const filteredResults = useMemo(() => {
     let filtered = results.filter(game => {
+      // Exclude hidden games
+      if (hiddenGameIds.has(game.appId)) return false;
       if (filters.minReviewScore > 0 && game.reviewScore !== null) {
         if (game.reviewScore < filters.minReviewScore) return false;
       }
@@ -167,8 +173,29 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
       }
     }
 
+    // Apply sorting
+    if (filters.sortBy !== 'relevance') {
+      filtered = [...filtered].sort((a, b) => {
+        switch (filters.sortBy) {
+          case 'rating':
+            // Higher rating first
+            return (b.reviewScore ?? 0) - (a.reviewScore ?? 0);
+          case 'release':
+            // Newer first
+            return (b.releaseYear ?? 0) - (a.releaseYear ?? 0);
+          case 'price':
+            // Lower price first, free games at top
+            const priceA = a.isFree ? 0 : parseFloat(a.price?.replace(/[^0-9.]/g, '') || '999');
+            const priceB = b.isFree ? 0 : parseFloat(b.price?.replace(/[^0-9.]/g, '') || '999');
+            return priceA - priceB;
+          default:
+            return 0;
+        }
+      });
+    }
+
     return filtered;
-  }, [results, filters]);
+  }, [results, filters, hiddenGameIds]);
 
   // Cycle through loading words
   useEffect(() => {
@@ -179,7 +206,23 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
     return () => clearInterval(interval);
   }, [isLoading]);
 
-  // Fetch taste profile on mount
+  // Fetch total games count on mount
+  useEffect(() => {
+    const fetchGameCount = async () => {
+      try {
+        const response = await fetch('/api/stats/overview');
+        const data = await response.json();
+        if (data.success && data.games?.total) {
+          setTotalGamesIndexed(data.games.total);
+        }
+      } catch (error) {
+        console.error('Failed to fetch game count:', error);
+      }
+    };
+    fetchGameCount();
+  }, []);
+
+  // Fetch taste profile and hidden games on mount
   useEffect(() => {
     if (!userId) return;
 
@@ -195,8 +238,48 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
       }
     };
 
+    const fetchHiddenGames = async () => {
+      try {
+        const response = await fetch(`/api/user/hidden-games?userId=${userId}`);
+        const data = await response.json();
+        if (data.success && data.hiddenAppIds) {
+          setHiddenGameIds(new Set(data.hiddenAppIds.map(String)));
+        }
+      } catch (error) {
+        console.error('Failed to fetch hidden games:', error);
+      }
+    };
+
     fetchTasteProfile();
+    fetchHiddenGames();
   }, [userId]);
+
+  // Hide a game from search results
+  const handleHideGame = async (appId: string, e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent link navigation
+    e.stopPropagation();
+
+    if (!userId) return;
+
+    // Optimistically update UI
+    setHiddenGameIds(prev => new Set([...prev, appId]));
+
+    try {
+      await fetch('/api/user/hidden-games', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, appId, action: 'hide' }),
+      });
+    } catch (error) {
+      console.error('Failed to hide game:', error);
+      // Revert on error
+      setHiddenGameIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(appId);
+        return newSet;
+      });
+    }
+  };
 
   const performSearch = async (searchQuery: string) => {
     // Cancel any existing search
@@ -321,8 +404,13 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
                   AI POWERED
                 </span>
               </h2>
-              <p className="text-[10px] sm:text-xs text-gray-500 font-mono">
-                Describe what you're looking for in plain English
+              <p className="text-[10px] sm:text-xs text-gray-500 font-mono flex items-center gap-2">
+                <span>Describe what you're looking for in plain English</span>
+                {totalGamesIndexed && (
+                  <span className="px-1.5 py-0.5 bg-neon-green/10 border border-neon-green/30 text-neon-green rounded text-[9px] sm:text-[10px]">
+                    {totalGamesIndexed.toLocaleString()} games indexed
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -420,7 +508,7 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
             <p className="text-gray-500 font-mono text-sm mb-4">"{query}"</p>
             <div className="px-4 py-2 bg-neon-orange/10 border border-neon-orange/30 rounded-lg mb-4">
               <p className="text-neon-orange font-mono text-xs">
-                <span className="text-white font-bold">150,000+</span> games in database
+                <span className="text-white font-bold">{totalGamesIndexed ? totalGamesIndexed.toLocaleString() : '...'}</span> games in database
               </p>
               <p className="text-gray-500 font-mono text-[10px] mt-1">
                 AI is finding the perfect matches for you
@@ -466,6 +554,20 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
 
           {/* Compact Filters */}
           <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-4 p-3 bg-terminal-dark/50 border border-terminal-border rounded-lg">
+            {/* Sort dropdown */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] sm:text-xs font-mono text-gray-500">Sort:</span>
+              <select
+                value={filters.sortBy}
+                onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value as SearchFilters['sortBy'] }))}
+                className="bg-terminal-dark border border-terminal-border rounded px-2 py-1 text-[10px] sm:text-xs font-mono text-neon-cyan focus:outline-none focus:border-neon-cyan cursor-pointer"
+              >
+                <option value="relevance">Relevance</option>
+                <option value="rating">Rating ↓</option>
+                <option value="release">Newest</option>
+                <option value="price">Price ↑</option>
+              </select>
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] sm:text-xs font-mono text-gray-500 min-w-[70px] sm:min-w-0">
                 {filters.popularityScore === 50 ? 'Balanced' : filters.popularityScore < 50 ? 'Hidden Gems' : 'Popular'}
@@ -605,6 +707,18 @@ export default function AISearchTab({ userId, isPremium = false }: AISearchTabPr
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-terminal-dark to-transparent opacity-60" />
+                  {/* Hide button */}
+                  {userId && (
+                    <button
+                      onClick={(e) => handleHideGame(game.appId, e)}
+                      className="absolute top-2 right-2 w-7 h-7 bg-black/70 hover:bg-red-900/80 border border-gray-600 hover:border-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all z-10"
+                      title="Hide from search results"
+                    >
+                      <svg className="w-3.5 h-3.5 text-gray-400 hover:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
 
                 <div className="p-2 sm:p-4">

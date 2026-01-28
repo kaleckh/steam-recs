@@ -67,6 +67,7 @@ export async function checkSearchLimit(userId: string): Promise<SearchLimitStatu
       select: {
         searchCredits: true,
         betaQueriesUsed: true,
+        subscriptionTier: true,
       },
     });
 
@@ -83,6 +84,20 @@ export async function checkSearchLimit(userId: string): Promise<SearchLimitStatu
           { error: 'User profile not found' },
           { status: 404 }
         ),
+      };
+    }
+
+    // Premium users get unlimited searches
+    const isPremium = profile.subscriptionTier === 'premium';
+    if (isPremium) {
+      return {
+        allowed: true,
+        purchasedCredits: 999999, // Show as unlimited
+        freeSearchesUsed: 0,
+        freeSearchesRemaining: 0,
+        totalSearchesRemaining: 999999,
+        hasPurchasedCredits: true,
+        usingFreeSearches: false,
       };
     }
 
@@ -166,6 +181,7 @@ export async function consumeSearchCredit(userId: string): Promise<{
       select: {
         searchCredits: true,
         betaQueriesUsed: true,
+        subscriptionTier: true,
       },
     });
 
@@ -174,6 +190,16 @@ export async function consumeSearchCredit(userId: string): Promise<{
         success: false,
         usedPurchasedCredit: false,
         purchasedCreditsRemaining: 0,
+        freeSearchesRemaining: 0,
+      };
+    }
+
+    // Premium users don't consume credits
+    if (profile.subscriptionTier === 'premium') {
+      return {
+        success: true,
+        usedPurchasedCredit: false,
+        purchasedCreditsRemaining: 999999,
         freeSearchesRemaining: 0,
       };
     }

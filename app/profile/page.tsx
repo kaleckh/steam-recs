@@ -55,6 +55,8 @@ function ProfileContent() {
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isResetTasteModalOpen, setIsResetTasteModalOpen] = useState(false);
   const [isResettingTaste, setIsResettingTaste] = useState(false);
+  const [isUnlinkSteamModalOpen, setIsUnlinkSteamModalOpen] = useState(false);
+  const [isUnlinkingSteam, setIsUnlinkingSteam] = useState(false);
 
   // Get active tab from URL params (only analytics tab remains on profile page)
   const tabParam = searchParams.get('tab');
@@ -283,6 +285,36 @@ function ProfileContent() {
     }
   };
 
+  const handleUnlinkSteam = async () => {
+    setIsUnlinkingSteam(true);
+    try {
+      const response = await fetch('/api/user/unlink-steam', {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Clear cached recommendations
+        setCachedRecommendations(null);
+        // Reset local state
+        setTopGames([]);
+        setRatingsCount(0);
+        // Refresh profile to get updated data (steamId will be null)
+        await refreshProfile();
+        // Close modal and show link steam form
+        setIsUnlinkSteamModalOpen(false);
+        setState({ stage: 'link_steam' });
+      } else {
+        console.error('Failed to unlink Steam:', data.error);
+      }
+    } catch (error) {
+      console.error('Failed to unlink Steam:', error);
+    } finally {
+      setIsUnlinkingSteam(false);
+    }
+  };
+
   const handleRetry = async () => {
     if (!profile) {
       // Profile is missing - try to refresh it
@@ -498,6 +530,16 @@ function ProfileContent() {
                           </svg>
                           RESET TASTE
                         </button>
+                        <button
+                          onClick={() => setIsUnlinkSteamModalOpen(true)}
+                          className="px-3 py-2 bg-terminal-dark border border-terminal-border text-gray-400 font-mono text-sm rounded-lg hover:border-red-500/50 hover:text-red-400 transition-all flex items-center gap-2"
+                          title="Remove linked Steam account"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          </svg>
+                          REMOVE STEAM
+                        </button>
                       </div>
                     </div>
 
@@ -627,6 +669,70 @@ function ProfileContent() {
 
               <p className="text-gray-600 font-mono text-xs mt-4">
                 Tip: &quot;Reset Training&quot; keeps your ratings so you can rebuild from them.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unlink Steam Modal */}
+      {isUnlinkSteamModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => !isUnlinkingSteam && setIsUnlinkSteamModalOpen(false)}
+          />
+          <div className="relative terminal-box rounded-lg p-8 max-w-md w-full">
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/20 border-2 border-red-500 flex items-center justify-center">
+                <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </div>
+              <h3 className="orbitron text-xl font-bold text-white mb-2">
+                REMOVE STEAM ACCOUNT
+              </h3>
+              <p className="text-gray-400 font-mono text-sm mb-6">
+                This will unlink your Steam account and delete all your library data.
+                Your ratings and feedback will be preserved.
+              </p>
+
+              <div className="bg-terminal-dark rounded-lg p-4 mb-6 border border-red-500/30 text-left">
+                <p className="text-red-400 font-mono text-xs mb-2 uppercase tracking-wider">
+                  This action will:
+                </p>
+                <ul className="text-gray-400 font-mono text-xs space-y-1">
+                  <li className="flex items-center gap-2">
+                    <span className="text-red-500">-</span> Remove linked Steam ID
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-red-500">-</span> Delete all game library data
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="text-red-500">-</span> Reset your preference profile
+                  </li>
+                </ul>
+              </div>
+
+              <div className="space-y-3">
+                <button
+                  onClick={handleUnlinkSteam}
+                  disabled={isUnlinkingSteam}
+                  className="w-full py-3 px-6 bg-red-500/20 text-red-400 border border-red-500 font-bold rounded-lg hover:bg-red-500 hover:text-white transition-all orbitron disabled:opacity-50"
+                >
+                  {isUnlinkingSteam ? 'REMOVING...' : 'REMOVE STEAM ACCOUNT'}
+                </button>
+                <button
+                  onClick={() => setIsUnlinkSteamModalOpen(false)}
+                  disabled={isUnlinkingSteam}
+                  className="w-full py-3 px-6 bg-terminal-dark border border-terminal-border text-gray-400 font-mono text-sm rounded-lg hover:border-gray-500 hover:text-white transition-all disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <p className="text-gray-600 font-mono text-xs mt-4">
+                You can link a different Steam account after removing this one.
               </p>
             </div>
           </div>
