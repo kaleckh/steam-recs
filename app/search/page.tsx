@@ -585,10 +585,11 @@ function SearchContent() {
               </p>
               <p className="text-gray-500 font-mono text-xs sm:text-sm mb-4 line-clamp-1">"{query}"</p>
               <div className="border-t border-terminal-border pt-3 sm:pt-4 mt-3 sm:mt-4">
-                <p className="text-gray-600 font-mono text-[10px] sm:text-xs leading-relaxed mb-4">
-                  Searching 22,000+ games for the perfect match.
-                  <br />
-                  <span className="text-neon-orange/70">Good recommendations take a moment.</span>
+                <p className="text-neon-cyan font-mono text-sm sm:text-base leading-relaxed mb-1">
+                  Analyzing <span className="text-white font-bold">60,000+</span> games
+                </p>
+                <p className="text-gray-400 font-mono text-xs sm:text-sm mb-4">
+                  <span className="text-neon-orange">Accuracy takes a moment.</span> We're finding the <span className="text-neon-green">perfect</span> matches.
                 </p>
                 <button
                   onClick={handleCancelSearch}

@@ -64,12 +64,7 @@ export default function Hero() {
     e.preventDefault();
     if (!searchQuery.trim()) return;
 
-    // If not logged in, show login prompt
-    if (!user) {
-      setShowLoginPrompt(true);
-      return;
-    }
-
+    // Route to search page - it will handle anonymous limits
     router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
   };
 
